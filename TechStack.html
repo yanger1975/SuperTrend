@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuperTrend 系統架構與技術棧說明</title>
+    <!-- 引入 Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(22, 28, 45, 0.6);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --primary-color: #3b82f6;
+            --primary-glow: rgba(59, 130, 246, 0.15);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --accent-color: #10b981;
+            --warning-color: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 40px 20px;
+            background-image: radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.05) 0%, transparent 40%),
+                              radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.03) 0%, transparent 40%);
+            background-attachment: fixed;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 30%, #a5b4fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+            letter-spacing: -0.03em;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            font-weight: 400;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+        }
+
+        @media (max-width: 900px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 30px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease, border-color 0.3s ease;
+            margin-bottom: 30px;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(59, 130, 246, 0.25);
+            box-shadow: 0 10px 30px -10px var(--primary-glow);
+        }
+
+        h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 10px;
+        }
+
+        h2::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 20px;
+            background: var(--primary-color);
+            border-radius: 2px;
+        }
+
+        h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 600;
+            margin: 20px 0 10px 0;
+            color: #fff;
+        }
+
+        ul {
+            list-style: none;
+        }
+
+        li {
+            position: relative;
+            padding-left: 20px;
+            margin-bottom: 10px;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        li::before {
+            content: '•';
+            color: var(--primary-color);
+            position: absolute;
+            left: 5px;
+            font-size: 1.2rem;
+            top: -2px;
+        }
+
+        .tech-tag-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .tech-tag {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            font-family: 'Outfit', sans-serif;
+            color: #d1d5db;
+        }
+
+        .tech-tag span {
+            color: var(--primary-color);
+            font-weight: 600;
+            margin-left: 4px;
+        }
+
+        .flowchart {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            overflow-x: auto;
+            color: #818cf8;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            margin: 15px 0;
+            white-space: pre;
+        }
+
+        .badge-beta {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--accent-color);
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-warning {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning-color);
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .decision-block {
+            background: rgba(255, 255, 255, 0.02);
+            border-left: 3px solid var(--accent-color);
+            padding: 15px;
+            border-radius: 0 8px 8px 0;
+            margin-top: 15px;
+        }
+
+        .decision-block h4 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #fff;
+        }
+
+        .decision-block p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>技術棧與系統架構說明</h1>
+            <p>SuperTrend Trading Performance Tracking System Technical Stack</p>
+        </header>
+
+        <div class="grid">
+            <!-- 左側：核心架構 -->
+            <div class="main-content">
+                <div class="card">
+                    <h2>系統高階架構</h2>
+                    <p>本系統採用高度解耦的模組化 Package 設計。核心回測與數學計算完全獨立於執行入口，藉此支援高品質的單元測試與研究重現。前台則以 Jupyter Notebook 作為研究沙盒，繪製高質感的 Plotly 互動式圖表。</p>
+                    
+                    <div class="flowchart">
+[Jupyter Front-End] ── 傳遞參數 ──> [backtest_engine.py]
+      │                                     │
+   呼叫查詢                             逐日盯市(MTM)
+      │                                     │
+      v                                     v
+[data_loader.py] ── 優先檢索 ──> [storage.py] (SQLite DB)
+      │                                     │
+   快取缺失                              增量寫入
+      v                                     v
+[Yahoo Finance API] ── 清洗與校正 ─────────┘</div>
+                </div>
+
+                <div class="card">
+                    <h2>模組職責定義</h2>
+                    
+                    <h3>1. 本地資料儲存層 (src/storage.py)</h3>
+                    <ul>
+                        <li>建立本地 SQLite 資料庫與初始化表格，快取下載過的歷史 K 線資料。</li>
+                        <li>實作 `upsert_prices` 方法，使用 `(ticker, interval, datetime)` 複合主鍵防止重複資料，降低對外部 API 的依賴。</li>
+                    </ul>
+
+                    <h3>2. 資料協調載入器 (src/data_loader.py)</h3>
+                    <ul>
+                        <li>協調儲存層與網路端。若本地快取已有請求之時間區間資料，則直接讀取 SQLite；否則下載缺漏天數並回寫。</li>
+                        <li>提供防錯校正機制，剔除無效資料並修復不合邏輯的 K 線價格 (如 High &lt; Close)。</li>
+                    </ul>
+
+                    <h3>3. 技術指標計算器 (src/indicators.py)</h3>
+                    <ul>
+                        <li>以純粹的 pandas/numpy vector 運算計算 SuperTrend。</li>
+                        <li>計算 HMA、SMA、EMA 均線過濾器，以及 ADX 趨勢強度與 RSI 動能指標。</li>
+                    </ul>
+
+                    <h3>4. 盯市回測引擎 (src/backtest_engine.py)</h3>
+                    <ul>
+                        <li>實作 K 線逐根迭代的交易模擬器，加入手續費與滑價計算。</li>
+                        <li>**盯市模型 (Mark-to-Market)：** 以持有股數和現金管理每日權益變化，確保每日波動率的真實反映。</li>
+                        <li>**事件優先序與 Gap 處理：** 當日 Low 觸發止損且 High 觸發止利時，保守假設止損優先；若開盤直接跳空突破止損價，則以 Open 成交。</li>
+                    </ul>
+
+                    <h3>5. 風險管理器 (src/risk_manager.py)</h3>
+                    <ul>
+                        <li>計算 CAGR, Max DD, Sharpe, Sortino, PF, Calmar, Expectancy 與 Ulcer Index (潰瘍指數)。</li>
+                        <li>執行 trade-level Monte Carlo 模擬，支援亂數種子重現，評估 95% 及 99% 的最壞回撤。</li>
+                    </ul>
+
+                    <h3>6. 優化器 (src/optimizer.py)</h3>
+                    <ul>
+                        <li>進行多維度參數網格搜尋，支援樣本內外 Walk-Forward 驗證以防擬合歷史幻覺。</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h2>關鍵設計決策與技術折衷</h2>
+                    
+                    <div class="decision-block">
+                        <h4>A. 採用 SQLite 代替純 CSV 作為快取 <span class="badge-beta">Beta</span></h4>
+                        <p>相較於每次載入都讀寫大型 CSV 檔案，SQLite 支援結構化查詢與複合主鍵 Upsert 覆蓋，更易於維護多個標的、多種週期（如日線與小時線）的增量價格更新，讀寫效率高且避免資料重複寫入。</p>
+                    </div>
+
+                    <div class="decision-block">
+                        <h4>B. 逐日盯市 (MTM) 權益更新 vs. 僅平倉結算</h4>
+                        <p>傳統簡單回測常在平倉時才一次性更新權益 (Equity)，這會導致持倉期間的權益是一條直線，進而扭曲了每日收益率。本系統採用每日盯市計價，使淨值曲線真實反映持倉期間的回撤， Sharpe 與 Sortino 等風險調整回報更具實盤參考性。</p>
+                    </div>
+
+                    <div class="decision-block">
+                        <h4>C. 順勢過濾器選用：HMA vs. 傳統 SMA/EMA</h4>
+                        <p>HMA (Hull Moving Average) 在提供平滑趨勢方向的同時，藉由 WMA 權重進行了延遲修正，反應速度顯著快於傳統的 SMA。然而 SMA 具備強烈的「市場集體共識」效應。系統保留了此兩者的自適應切換，供優化器進行綜合評估。</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右側：技術棧與相依 -->
+            <div class="sidebar">
+                <div class="card">
+                    <h2>外部相依套件</h2>
+                    <div class="tech-tag-container">
+                        <div class="tech-tag">python <span>3.12</span></div>
+                        <div class="tech-tag">pandas <span>3.0.3</span></div>
+                        <div class="tech-tag">numpy <span>2.5.1</span></div>
+                        <div class="tech-tag">yfinance <span>1.5.1</span></div>
+                        <div class="tech-tag">plotly <span>6.9.0</span></div>
+                        <div class="tech-tag">sqlite3 <span>built-in</span></div>
+                        <div class="tech-tag">pytest <span>8.2.2</span></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>非功能性需求要求</h2>
+                    <ul>
+                        <li>**可重現性：** 指定 Monte Carlo 模擬 seed 後，多次回測數據完全一致。</li>
+                        <li>**效能要求：** 快取讀取與回測流程執行完畢限制在 3 秒內。</li>
+                        <li>**型別安全性：** 所有核心邏輯函式均具備 Type Hints 規格宣告。</li>
+                    </ul>
+                </div>
+
+                <div class="card">
+                    <h2>已知系統限制 <span class="badge-warning">Constraint</span></h2>
+                    <ul>
+                        <li>**小時線歷史窗口：** Yahoo Finance 的 1-Hour (小時) 資料僅提供最近 730 天，因此多週期回測長度受限。</li>
+                        <li>**無融券借券成本：** 短期交易或 Short 反向交易並未加計利息與融券費用，空頭模擬可能偏向樂觀。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
