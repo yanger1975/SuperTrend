@@ -97,41 +97,48 @@ def compute_supertrend(df: pd.DataFrame, period: int = 10, multiplier: float = 3
     high = df["High"]
     low = df["Low"]
     close = df["Close"]
-    
+
     # 1. 計算 True Range 與 ATR
     tr = pd.concat([
         high - low,
         (high - close.shift()).abs(),
         (low - close.shift()).abs()
     ], axis=1).max(axis=1)
-    
+
     # 標準 SuperTrend 通常使用 RMA 平滑的 ATR
     atr = tr.ewm(alpha=1.0/period, adjust=False).mean()
-    
+
     # 2. 計算基礎上下軌
     hl2 = (high + low) / 2
     basic_ub = hl2 + (multiplier * atr)
     basic_lb = hl2 - (multiplier * atr)
-    
+
     # 3. 迭代計算最終上下軌與趨勢方向
     final_ub = np.zeros(len(df))
     final_lb = np.zeros(len(df))
     trend = np.ones(len(df), dtype=int)
     supertrend = np.zeros(len(df))
-    
+
+    # 初始化第一筆資料
+    final_ub[0] = basic_ub.iloc[0]
+    final_lb[0] = basic_lb.iloc[0]
+    # 預設第一筆為多頭趨勢
+    trend[0] = 1
+    supertrend[0] = final_lb[0]
+
     for i in range(1, len(df)):
         # Upper Band
         if basic_ub.iloc[i] < final_ub[i-1] or close.iloc[i-1] > final_ub[i-1]:
             final_ub[i] = basic_ub.iloc[i]
         else:
             final_ub[i] = final_ub[i-1]
-            
+
         # Lower Band
         if basic_lb.iloc[i] > final_lb[i-1] or close.iloc[i-1] < final_lb[i-1]:
             final_lb[i] = basic_lb.iloc[i]
         else:
             final_lb[i] = final_lb[i-1]
-            
+
         # Trend
         if close.iloc[i] > final_ub[i]:
             trend[i] = 1
@@ -139,16 +146,13 @@ def compute_supertrend(df: pd.DataFrame, period: int = 10, multiplier: float = 3
             trend[i] = -1
         else:
             trend[i] = trend[i-1]
-            
+
         # SuperTrend Value
         if trend[i] == 1:
             supertrend[i] = final_lb[i]
         else:
             supertrend[i] = final_ub[i]
-            
-    # 對齊第一筆 (無法向前比對的初始值)
-    supertrend[0] = basic_ub.iloc[0]
-    
+
     result_df = df.copy()
     result_df["SuperTrend"] = supertrend
     result_df["Trend"] = pd.Series(trend, index=df.index)
