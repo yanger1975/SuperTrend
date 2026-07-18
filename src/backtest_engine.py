@@ -164,8 +164,27 @@ class BacktestEngine:
                 ma_ok = self.df["MA_Filter"].iloc[i] if "MA_Filter" in self.df.columns else True
                 adx_ok = self.df["ADX_Filter"].iloc[i] if "ADX_Filter" in self.df.columns else True
                 rsi_ok = self.df["RSI_Filter"].iloc[i] if "RSI_Filter" in self.df.columns else True
-                
-                if trend == 1 and prev_trend == -1 and ma_ok and adx_ok and rsi_ok:
+
+                trend = self.df["Trend"].iloc[i]
+                prev_trend = self.df["Trend"].iloc[i-1]
+
+                # --- 雙模式進場邏輯 ---
+                # 判斷 MA_Filter 是否實際啟用 (非全 True)
+                ma_filter_active = (
+                    "MA_Filter" in self.df.columns
+                    and not self.df["MA_Filter"].all()  # 有 False 值表示實際在過濾
+                )
+
+                if ma_filter_active:
+                    # 模式 2：有 HMA 過濾 → 趨勢跟隨模式
+                    # 只要目前多頭趨勢且所有過濾器通過即可進場，不需 Crossover
+                    entry_signal = trend == 1 and ma_ok and adx_ok and rsi_ok
+                else:
+                    # 模式 1：無 HMA 過濾 → 反轉捕捉模式
+                    # 嚴格要求 SuperTrend Crossover (由空轉多)
+                    entry_signal = trend == 1 and prev_trend == -1 and ma_ok and adx_ok and rsi_ok
+
+                if entry_signal:
                     # 買入進場
                     position = 1
                     current_equity = cash

@@ -48,10 +48,18 @@ class ParameterOptimizer:
                 df_st_test = df_st_full.iloc[split_idx:].copy() if train_ratio < 1.0 else pd.DataFrame()
 
                 for ma_p in ma_periods:
+                    # ma_p = 0 或 None 表示「不使用 HMA 過濾器」(模式 1: Crossover 必要)
+                    # ma_p > 0 表示使用 HMA(ma_p) 過濾 (模式 2: 趨勢跟隨)
+                    use_hma_filter = ma_p is not None and ma_p > 0
+
                     # A. 樣本內 (Train) 回測與優化
                     df_temp_train = df_st_train.copy()
-                    df_temp_train["HMA"] = compute_hma(df_temp_train["Close"], period=ma_p)
-                    df_temp_train["MA_Filter"] = df_temp_train["Close"] > df_temp_train["HMA"]
+                    if use_hma_filter:
+                        df_temp_train["HMA"] = compute_hma(df_temp_train["Close"], period=ma_p)
+                        df_temp_train["MA_Filter"] = df_temp_train["Close"] > df_temp_train["HMA"]
+                    else:
+                        # 不使用 HMA 過濾：全部設為 True
+                        df_temp_train["MA_Filter"] = True
 
                     engine_train = BacktestEngine(df_temp_train)
                     trades_train, eq_train, _ = engine_train.run(long_only=True)
@@ -63,7 +71,8 @@ class ParameterOptimizer:
                         result_item = {
                             "ST_Period": period,
                             "ST_Multiplier": mult,
-                            "MA_Period": ma_p,
+                            "MA_Period": ma_p if use_hma_filter else 0,
+                            "Use_HMA_Filter": use_hma_filter,
                             "Custom Score": score_train
                         }
                         result_item.update(metrics_train)
@@ -72,8 +81,11 @@ class ParameterOptimizer:
                     # B. 樣本外 (Test) 驗證
                     if not df_st_test.empty:
                         df_temp_test = df_st_test.copy()
-                        df_temp_test["HMA"] = compute_hma(df_temp_test["Close"], period=ma_p)
-                        df_temp_test["MA_Filter"] = df_temp_test["Close"] > df_temp_test["HMA"]
+                        if use_hma_filter:
+                            df_temp_test["HMA"] = compute_hma(df_temp_test["Close"], period=ma_p)
+                            df_temp_test["MA_Filter"] = df_temp_test["Close"] > df_temp_test["HMA"]
+                        else:
+                            df_temp_test["MA_Filter"] = True
 
                         engine_test = BacktestEngine(df_temp_test)
                         trades_test, eq_test, _ = engine_test.run(long_only=True)
@@ -85,7 +97,8 @@ class ParameterOptimizer:
                             result_item_test = {
                                 "ST_Period": period,
                                 "ST_Multiplier": mult,
-                                "MA_Period": ma_p,
+                                "MA_Period": ma_p if use_hma_filter else 0,
+                                "Use_HMA_Filter": use_hma_filter,
                                 "Custom Score": score_test
                             }
                             result_item_test.update(metrics_test)
