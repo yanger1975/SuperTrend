@@ -52,6 +52,21 @@ class DataLoader:
         start_dt = pd.to_datetime(start_date)
         end_dt = pd.to_datetime(end_date)
         
+        # 對於 1 小時 (1h / 60m) 資料，yfinance 最長僅支援下載最近 730 日
+        # 若指定時間區間超過 730 日，自動將起始日期限制為 730 日內，無需提示錯誤
+        if interval.lower() in ["1h", "60m"]:
+            max_days = 730
+            # 1. 若指定時間區間超過 730 日，自動將起始日期限制為 end_dt - 730 日
+            if (end_dt - start_dt).days > max_days:
+                start_dt = end_dt - pd.Timedelta(days=max_days)
+            
+            # 2. 若 start_dt 早於當前時間前 730 日，且 end_dt 在當前時間 730 日內，限制為 earliest_allowed
+            earliest_allowed = pd.Timestamp.now() - pd.Timedelta(days=max_days)
+            if start_dt < earliest_allowed and earliest_allowed < end_dt:
+                start_dt = earliest_allowed
+                
+            start_date = start_dt.strftime("%Y-%m-%d")
+        
         if not refresh:
             # 優先從 SQLite 查詢
             local_df = self.storage.query_prices(ticker, interval, start_date, end_date)
