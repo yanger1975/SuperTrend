@@ -14,15 +14,21 @@ Usage:
 
 import argparse
 import json
-import logging
 import sys
 import os
-import time
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
+import concurrent.futures
 
 import pandas as pd
 import numpy as np
+
+# tqdm fallback
+try:
+    from tqdm import tqdm
+except ImportError:
+    def tqdm(iterable, total=None, desc=None, **kwargs):
+        return iterable
 
 # 將 spec/ 加入 sys.path 以便 import TrendingScraper
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "spec"))
@@ -30,8 +36,8 @@ from trending_scraper import TrendingScraper
 
 # Import src modules
 from src.data_loader import DataLoader
-from src.indicators import compute_supertrend, compute_hma, compute_adx, compute_rsi
-from src.backtest_engine import BacktestEngine, Trade
+from src.indicators import compute_supertrend, compute_hma
+from src.backtest_engine import BacktestEngine
 from src.risk_manager import RiskManager
 from src.optimizer import ParameterOptimizer
 
@@ -278,19 +284,13 @@ def process_ticker(ticker, args):
         else:
             df_indicators["MA_Filter"] = True
 
-        df_indicators["ADX"] = compute_adx(df_indicators, period=14)
-        df_indicators["ADX_Filter"] = df_indicators["ADX"] > 20  # Always available, but filter is off by default
-
-        df_indicators["RSI"] = compute_rsi(df_indicators["Close"], period=14)
-        df_indicators["RSI_Filter"] = (df_indicators["RSI"] > 30) & (df_indicators["RSI"] < 70)
-
         engine = BacktestEngine(df_indicators)
         trades, strat_equity, _ = engine.run(
             long_only=True,
-            stop_loss_pct=args.stop_loss if hasattr(args, 'stop_loss') and args.stop_loss else 0.0,
-            take_profit_pct=args.take_profit if hasattr(args, 'take_profit') and args.take_profit else 0.0,
-            commission_bps=args.commission if hasattr(args, 'commission') else 10.0,
-            slippage_bps=args.slippage if hasattr(args, 'slippage') else 5.0,
+            stop_loss_pct=0.0,
+            take_profit_pct=0.0,
+            commission_bps=10.0,
+            slippage_bps=5.0,
             position_sizing_mode="fixed_fraction"
         )
 
@@ -345,14 +345,6 @@ Examples:
                         help="K 線週期 (預設: 1d)")
     parser.add_argument("--workers", type=int, default=4,
                         help="並行處理的 worker 數量 (預設: 4)")
-    parser.add_argument("--commission", type=float, default=10.0,
-                        help="手續費 (基點，單邊，預設: 10)")
-    parser.add_argument("--slippage", type=float, default=5.0,
-                        help="滑價 (基點，單邊，預設: 5)")
-    parser.add_argument("--stop-loss", type=float, default=0.0,
-                        help="停損百分比 (例如 0.08 代表 8%，預設: 0 = 不啟用)")
-    parser.add_argument("--take-profit", type=float, default=0.0,
-                        help="停利百分比 (例如 0.15 代表 15%，預設: 0 = 不啟用)")
 
     args = parser.parse_args()
 
@@ -366,11 +358,8 @@ Examples:
     print(f"  輸出目錄: data/{args.date}/")
     print(f"  資料區間: {args.start} ~ {args.end}")
     print(f"  K 線週期: {args.interval}")
-    print(f"  手續費: {args.commission} bps | 滑價: {args.slippage} bps")
-    if args.stop_loss > 0:
-        print(f"  停損: {args.stop_loss * 100:.1f}%")
-    if args.take_profit > 0:
-        print(f"  停利: {args.take_profit * 100:.1f}%")
+    print(f"  手續費: 10 bps | 滑價: 5 bps")
+    print(f"  停損: 0% (不啟用) | 停利: 0% (不啟用)")
     print(f"  並行數:   {args.workers}")
     print()
 
@@ -378,6 +367,39 @@ Examples:
     tickers = collect_tickers()
     if not tickers:
         print("錯誤: 沒有可處理的標的")
+        sys.exit(1)
+
+    # Step 2: 並行處理每個 ticker
+    print(f"開始並行處理 {len(tickers)} 個標的 (workers={args.workers})...\n")
+    results = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
+        future_to_ticker = {executor.submit(process_ticker, ticker, args): ticker for ticker in tickers}
+        for future in tqdm(concurrent.futures.as_completed(future_to_ticker), total=len(tickers), desc="Processing"):
+            ticker = future_to_ticker[future]
+            try:
+                result = future.result()
+                results.append(result)
+            except Exception as e:
+                print(f"[{ticker}] 執行緒異常: {e}")
+                results.append({"ticker": ticker, "success": False, "path": None, "error": str(e)})
+
+    # Step 3: 印出摘要
+    print("\n" + "=" * 60)
+    print("批次優化完成摘要")
+    print("=" * 60)
+    print(f"{'Ticker':<10} {'Status':<10} {'Path / Error'}")
+    print("-" * 60)
+    all_success = True
+    for r in results:
+        status = "SUCCESS" if r["success"] else "FAILED"
+        path_or_err = r["path"] if r["success"] else r["error"]
+        print(f"{r['ticker']:<10} {status:<10} {path_or_err}")
+        if not r["success"]:
+            all_success = False
+    print("=" * 60)
+    print(f"成功: {sum(1 for r in results if r['success'])}/{len(results)}")
+
+    if not all_success:
         sys.exit(1)
 
 
