@@ -13,9 +13,51 @@ Usage:
 """
 
 import argparse
+import json
+import logging
 import sys
 import os
 from datetime import datetime
+
+# 將 spec/ 加入 sys.path 以便 import TrendingScraper
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "spec"))
+from trending_scraper import TrendingScraper
+
+
+def collect_tickers() -> list:
+    """
+    收集交易標的清單：
+    1. 從 TrendingScraper 爬取 Most Active 股票 (含 fallback 機制)
+    2. 與 must_have.json 合併去重
+    3. 回傳最終 ticker 清單
+    """
+    # Step 1: 爬取 Most Active
+    print("Step 1: 收集交易標的清單...")
+    scraper = TrendingScraper(fallback_file="data/most-active.json")
+    tickers = scraper.fetch_top_tickers(limit=10)
+    print(f"  爬取 Most Active: {len(tickers)} 個標的")
+    print(f"  Tickers: {', '.join(tickers)}")
+
+    # Step 2: 讀取 must_have.json
+    must_have_path = "data/must_have.json"
+    must_have = []
+    if os.path.exists(must_have_path):
+        with open(must_have_path, "r", encoding="utf-8") as f:
+            must_have = json.load(f)
+        print(f"  Must Have: {len(must_have)} 個標的 ({', '.join(must_have)})")
+
+    # Step 3: 合併去重 (保持順序：must_have 在前，most-active 在後)
+    seen = set()
+    merged = []
+    for t in must_have + tickers:
+        if t not in seen:
+            seen.add(t)
+            merged.append(t)
+
+    print(f"  合併後總計: {len(merged)} 個標的")
+    print(f"  最終清單: {', '.join(merged)}")
+    print()
+    return merged
 
 
 def main():
@@ -56,7 +98,11 @@ Examples:
     print(f"  並行數:   {args.workers}")
     print()
 
-    # TODO: 後續步驟將在此加入
+    # Step 1: 收集 ticker 清單
+    tickers = collect_tickers()
+    if not tickers:
+        print("錯誤: 沒有可處理的標的")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
