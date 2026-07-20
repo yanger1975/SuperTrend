@@ -358,7 +358,43 @@ Examples:
         print("錯誤: 沒有可處理的標的")
         sys.exit(1)
 
-    # TODO: 後續步驟將在此加入 (Task 4: 並行處理)
+    # Step 2: 並行處理所有 ticker
+    print(f"Step 2: 開始並行處理 {len(tickers)} 個標的 (workers={args.workers})...")
+    print("=" * 60)
+
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    results = []
+    with ThreadPoolExecutor(max_workers=args.workers) as executor:
+        futures = {
+            executor.submit(process_ticker, ticker, args): ticker
+            for ticker in tickers
+        }
+        for future in as_completed(futures):
+            result = future.result()
+            results.append(result)
+
+    # Step 3: 輸出摘要
+    print()
+    print("=" * 60)
+    print("批次處理完成！")
+    print("=" * 60)
+
+    success = [r for r in results if r["success"]]
+    failed = [r for r in results if not r["success"]]
+
+    print(f"總計: {len(results)} 個標的")
+    print(f"成功: {len(success)} 個")
+    if success:
+        for r in success:
+            print(f"  OK  {r['ticker']} -> {r['path']}")
+
+    print(f"失敗: {len(failed)} 個")
+    if failed:
+        for r in failed:
+            print(f"  FAIL {r['ticker']} -> {r['error']}")
+
+    print(f"報告目錄: data/{args.date}/")
 
 
 if __name__ == "__main__":
