@@ -243,19 +243,19 @@
             <div class="main-content">
                 <div class="card">
                     <h2>系統高階架構</h2>
-                    <p>本系統採用高度解耦的模組化 Package 設計。核心回測與數學計算完全獨立於執行入口，藉此支援高品質的單元測試與研究重現。前台則以 Jupyter Notebook 作為研究沙盒，繪製高質感的 Plotly 互動式圖表。</p>
+                    <p>本系統採用高度解耦的模組化 Package 設計。核心回測與數學計算完全獨立於執行入口，支援單員測試、Jupyter Notebook 互動分析與 CLI 多標的批次平行運算。系統整合 SQLite 本地資料庫，同時實現歷史 K 線快取、最優參數持久化及最新交易訊號管理。</p>
 
                     <div class="flowchart">
-[Jupyter Front-End] ── 傳遞參數 ──> [backtest_engine.py]
-      │                                     │
-   呼叫查詢                             逐日盯市(MTM)
-      │                                     │
-      v                                     v
-[data_loader.py] ── 優先檢索 ──> [storage.py] (SQLite DB)
-      │                                     │
-   快取缺失                              增量寫入
-      v                                     v
-[Yahoo Finance API] ── 清洗與校正 ─────────┘</div>
+[CLI / Jupyter 入口] ──(1) 呼叫資料庫／網路──> [data_loader.py]
+  (run_batch_optimization)                          │
+  (run_optimization.py)                      優先檢索/增量快取
+  (Notebook Cell)                                   v
+                                           [storage.py] (SQLite DB)
+[optimizer.py] <──(2) 網格優化 & 回測── [price_history / supertrend_params]
+       │                                            ▲
+ (3) 產出報告 & 訊號存庫                             │
+       ├─── Markdown 報告 ──> data/{date}/{ticker}.md / All.md
+       └─── 持久化寫入 ──────> supertrend_params & stock_signals</div>
                 </div>
 
                 <div class="card">
@@ -263,39 +263,47 @@
 
                     <h3>1. 本地資料儲存層 (src/storage.py)</h3>
                     <ul>
-                        <li>建立本地 SQLite 資料庫與初始化表格，快取下載過的歷史 K 線資料。</li>
-                        <li>實作 `upsert_prices` 方法，使用 `(ticker, interval, datetime)` 複合主鍵防止重複資料，降低對外部 API 的依賴。</li>
+                        <li>建立與初始化 SQLite 資料庫 (`data/market_data.db`)。</li>
+                        <li>**`price_history` 表格**：實作 `upsert_prices` 方法，使用 `(ticker, interval, datetime)` 主鍵避免重複資料。</li>
+                        <li>**`supertrend_params` 表格**：實作 `save_supertrend_params` 與 `query_supertrend_params`，儲存各標的最適參數 (`ST_Period`, `ST_Multiplier`, `MA_Period`, `Use_HMA_Filter`) 及風控回測指標。</li>
+                        <li>**`stock_signals` 表格**：實作 `save_stock_signals` 與 `query_stock_signals`，儲存標的最新持倉狀態 (`1=long`, `0=cash`)、進場參考點 (`entry_ref`)、出場參考點 (`exit_ref`)、`close_price` 與 `hma` 數值。</li>
                     </ul>
 
                     <h3>2. 資料協調載入器 (src/data_loader.py)</h3>
                     <ul>
-                        <li>協調儲存層與網路端。若本地快取已有請求之時間區間資料，則直接讀取 SQLite；否則下載缺漏天數並回寫。</li>
-                        <li>提供防錯校正機制，剔除無效資料並修復不合邏輯的 K 線價格 (如 High &lt; Close)。</li>
-                        <li>**1 小時 (1-Hour) 自動截斷：** 當請求 1 小時頻率且指定日期區間超過 730 日時，自動將起始日期限制在 730 日內，無需拋出錯誤。</li>
+                        <li>協調儲存層與 `yfinance` API。若本地快取已有資料則直接讀取；否則下載缺漏天數並寫入 SQLite。</li>
+                        <li>提供防錯校正機制，修復不合邏輯的 K 線價格 (如 High &lt; Close)。</li>
+                        <li>**1 小時 (1-Hour) 自動截斷：** 當請求 1 小時頻率且指定日期區間超過 730 日時，自動將起始日期限制在 730 日內。</li>
                     </ul>
 
                     <h3>3. 技術指標計算器 (src/indicators.py)</h3>
                     <ul>
-                        <li>以純粹的 pandas/numpy vector 運算計算 SuperTrend。</li>
-                        <li>計算 HMA、SMA、EMA 均線過濾器，以及 ADX 趨勢強度與 RSI 動能指標。</li>
+                        <li>使用 Pandas / NumPy 向量化運算計算 SuperTrend 指標。</li>
+                        <li>計算 HMA (Hull Moving Average) 均線過濾器、ADX 趨勢強度與 RSI 動能指標。</li>
                     </ul>
 
                     <h3>4. 盯市回測引擎 (src/backtest_engine.py)</h3>
                     <ul>
-                        <li>實作 K 線逐根迭代的交易模擬器，加入手續費與滑價計算。</li>
-                        <li>**盯市模型 (Mark-to-Market)：** 以持有股數和現金管理每日權益變化，確保每日波動率的真實反映。</li>
-                        <li>**事件優先序與 Gap 處理：** 當日 Low 觸發止損且 High 觸發止利時，保守假設止損優先；若開盤直接跳空突破止損價，則以 Open 成交。</li>
+                        <li>實作 K 線逐根迭代交易模擬器，支援手續費與滑價計算。</li>
+                        <li>**盯市模型 (Mark-to-Market)：** 每日更新持倉淨值，真實反映持倉期間的回撤與波動。</li>
+                        <li>**跳空 (Gap) 處理：** 若開盤價直接跳空突破止損價，以 Open 價成交。</li>
                     </ul>
 
                     <h3>5. 風險管理器 (src/risk_manager.py)</h3>
                     <ul>
                         <li>計算 CAGR, Max DD, Sharpe, Sortino, PF, Calmar, Expectancy 與 Ulcer Index (潰瘍指數)。</li>
-                        <li>執行 trade-level Monte Carlo 模擬，支援亂數種子重現，評估 95% 及 99% 的最壞回撤。</li>
+                        <li>執行 Trade-level Monte Carlo 模擬，支援指定 Seed 重現，評估 95% 及 99% 風險分位數。</li>
                     </ul>
 
-                    <h3>6. 優化器 (src/optimizer.py)</h3>
+                    <h3>6. 參數優化器 (src/optimizer.py)</h3>
                     <ul>
-                        <li>進行多維度參數網格搜尋，支援樣本內外 Walk-Forward 驗證以防擬合歷史幻覺。</li>
+                        <li>進行多維度參數網格搜尋，支援樣本內/外 (Walk-Forward) 驗證。</li>
+                    </ul>
+
+                    <h3>7. 執行腳本與報告生成 (run_batch_optimization.py & run_optimization.py)</h3>
+                    <ul>
+                        <li>**多標的批次執行 (`run_batch_optimization.py`)**：自動收集標的（Most Active + Must Have），採用多執行緒 (`ThreadPoolExecutor`) 並行跑優化與回測。</li>
+                        <li>**報告生成**：自動產出個股 Markdown 報告與 `All.md` 全標的總覽報告（`long` 持倉標的自動置頂排序）。</li>
                     </ul>
                 </div>
 
@@ -303,18 +311,18 @@
                     <h2>關鍵設計決策與技術折衷</h2>
 
                     <div class="decision-block">
-                        <h4>A. 採用 SQLite 代替純 CSV 作為快取 <span class="badge-beta">Beta</span></h4>
-                        <p>相較於每次載入都讀寫大型 CSV 檔案，SQLite 支援結構化查詢與複合主鍵 Upsert 覆蓋，更易於維護多個標的、多種週期（如日線與小時線）的增量價格更新，讀寫效率高且避免資料重複寫入。</p>
+                        <h4>A. 採用 SQLite 多表設計代替單一 CSV <span class="badge-beta">Beta</span></h4>
+                        <p>SQLite 支援結構化查詢與複合主鍵 Upsert 覆蓋更新，能高效儲存價格歷史 (`price_history`)、最適參數 (`supertrend_params`) 與最新交易訊號 (`stock_signals`)，避免資料重複並加速批次讀寫。</p>
                     </div>
 
                     <div class="decision-block">
                         <h4>B. 逐日盯市 (MTM) 權益更新 vs. 僅平倉結算</h4>
-                        <p>傳統簡單回測常在平倉時才一次性更新權益 (Equity)，這會導致持倉期間的權益是一條直線，進而扭曲了每日收益率。本系統採用每日盯市計價，使淨值曲線真實反映持倉期間的回撤， Sharpe 與 Sortino 等風險調整回報更具實盤參考性。</p>
+                        <p>傳統簡單回測常在平倉時一次性更新權益，會扭曲持倉期間的真實波動率。本系統採用每日盯市計價，使淨值曲線與風險指標 (Sharpe / Sortino / Ulcer Index) 更具實盤參考性。</p>
                     </div>
 
                     <div class="decision-block">
                         <h4>C. 順勢過濾器選用：HMA vs. 傳統 SMA/EMA</h4>
-                        <p>HMA (Hull Moving Average) 在提供平滑趨勢方向的同時，藉由 WMA 權重進行了延遲修正，反應速度顯著快於傳統的 SMA。然而 SMA 具備強烈的「市場集體共識」效應。系統保留了此兩者的自適應切換，供優化器進行綜合評估。</p>
+                        <p>HMA 藉由 WMA 權重進行延遲修正，反應速度快於傳統 SMA。系統保留自適應切換，供優化器自動決定是否啟用 HMA 過濾器。</p>
                     </div>
                 </div>
             </div>
@@ -337,16 +345,16 @@
                 <div class="card">
                     <h2>非功能性需求要求</h2>
                     <ul>
-                        <li>**可重現性：** 指定 Monte Carlo 模擬 seed 後，多次回測數據完全一致。</li>
+                        <li>**可重現性：** 指定 Monte Carlo 模擬 Seed 後，多次回測數據完全一致。</li>
                         <li>**效能要求：** 快取讀取與回測流程執行完畢限制在 3 秒內。</li>
-                        <li>**型別安全性：** 所有核心邏輯函式均具備 Type Hints 規格宣告。</li>
+                        <li>**並行計算：** 批次優化腳本支援多執行緒並行運算。</li>
                     </ul>
                 </div>
 
                 <div class="card">
                     <h2>已知系統限制 <span class="badge-warning">Constraint</span></h2>
                     <ul>
-                        <li>**小時線歷史窗口自動截斷：** Yahoo Finance 的 1-Hour (小時) 資料僅提供最近 730 天，當請求時間超過 730 天時系統會自動截斷起始日期在 730 天內，免去手動調整與錯誤處理。</li>
+                        <li>**小時線歷史窗口自動截斷：** Yahoo Finance 的 1-Hour (小時) 資料僅提供最近 730 天，當請求時間超過 730 天時系統會自動截斷起始日期在 730 天內。</li>
                         <li>**無融券借券成本：** 短期交易或 Short 反向交易並未加計利息與融券費用，空頭模擬可能偏向樂觀。</li>
                     </ul>
                 </div>

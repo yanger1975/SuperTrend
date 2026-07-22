@@ -373,6 +373,24 @@ def process_ticker(ticker, args):
         rm = RiskManager(trades, strat_equity)
         metrics = rm.calculate_metrics()
 
+        # 儲存最適參數與績效至 SQLite 資料庫 (supertrend_params 表格)
+        loader.storage.save_supertrend_params(
+            ticker=ticker,
+            start_date=args.start,
+            end_date=args.end,
+            st_period=best_period,
+            st_multiplier=best_mult,
+            ma_period=best_ma,
+            use_hma_filter=best_use_hma,
+            custom_score=float(best["Custom Score"]) if "Custom Score" in best else None,
+            cagr=metrics.get("CAGR"),
+            max_drawdown=metrics.get("Max Drawdown"),
+            sharpe_ratio=metrics.get("Sharpe Ratio"),
+            calmar_ratio=metrics.get("Calmar Ratio"),
+            win_rate=metrics.get("Win Rate"),
+            profit_factor=metrics.get("Profit Factor")
+        )
+
         # Monte Carlo
         mc_results = None
         if len(trades) >= 10:
@@ -426,6 +444,24 @@ def process_ticker(ticker, args):
             "ma_period": best_ma,
             "use_hma": best_use_hma
         }
+
+        # 儲存最新市場狀態與交易訊號至 SQLite 資料庫 (stock_signals 表格)
+        db_pos = 1 if position == "long" else 0
+        db_entry_ref = None if db_pos == 1 else st_val
+        db_exit_ref = st_val if db_pos == 1 else None
+        db_hma = hma_val if hma_val is not None else 0.0
+
+        loader.storage.save_stock_signals(
+            ticker=ticker,
+            start_date=args.start,
+            end_date=args.end,
+            close_price=close_val,
+            supertrend=st_val,
+            position=db_pos,
+            entry_ref=db_entry_ref,
+            exit_ref=db_exit_ref,
+            hma=db_hma
+        )
 
         # 3e. 產出 Markdown
         out_dir = os.path.join("data", args.date)

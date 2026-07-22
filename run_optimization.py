@@ -408,6 +408,47 @@ Examples:
     metrics = rm.calculate_metrics()
     print_performance_metrics(metrics)
 
+    # Save optimal parameters and metrics to SQLite database
+    loader.storage.save_supertrend_params(
+        ticker=args.ticker,
+        start_date=args.start,
+        end_date=args.end,
+        st_period=best_period,
+        st_multiplier=best_mult,
+        ma_period=best_ma,
+        use_hma_filter=best_use_hma,
+        custom_score=float(best["Custom Score"]) if "Custom Score" in best else None,
+        cagr=metrics.get("CAGR"),
+        max_drawdown=metrics.get("Max Drawdown"),
+        sharpe_ratio=metrics.get("Sharpe Ratio"),
+        calmar_ratio=metrics.get("Calmar Ratio"),
+        win_rate=metrics.get("Win Rate"),
+        profit_factor=metrics.get("Profit Factor")
+    )
+
+    # Save latest market state and trading signal to SQLite database
+    last_row = df_indicators.iloc[-1]
+    close_val = float(last_row["Close"])
+    st_val = float(last_row["SuperTrend"])
+    hma_val = float(last_row["HMA"]) if best_use_hma and "HMA" in df_indicators.columns and pd.notna(last_row["HMA"]) else 0.0
+
+    is_long = close_val > st_val and (not best_use_hma or close_val > hma_val)
+    db_pos = 1 if is_long else 0
+    db_entry_ref = None if db_pos == 1 else st_val
+    db_exit_ref = st_val if db_pos == 1 else None
+
+    loader.storage.save_stock_signals(
+        ticker=args.ticker,
+        start_date=args.start,
+        end_date=args.end,
+        close_price=close_val,
+        supertrend=st_val,
+        position=db_pos,
+        entry_ref=db_entry_ref,
+        exit_ref=db_exit_ref,
+        hma=hma_val
+    )
+
     # Also show Monte Carlo if there are enough trades
     if len(trades) >= 10:
         print("步驟 6: Monte Carlo 風險模擬 (5000 次)...")
