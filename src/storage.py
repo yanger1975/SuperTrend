@@ -57,9 +57,9 @@ class SQLiteStorage:
                 if hasattr(dt, "tzinfo") and dt.tzinfo is not None:
                     dt = dt.tz_localize(None)
                 dt_str = dt.strftime("%Y-%m-%d %H:%M:%S")
-                
+
                 volume_val = float(row["Volume"]) if not pd.isna(row["Volume"]) else None
-                
+
                 cursor.execute("""
                     INSERT INTO price_history (ticker, interval, datetime, open, high, low, close, volume)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -71,13 +71,13 @@ class SQLiteStorage:
                         volume=excluded.volume,
                         updated_at=CURRENT_TIMESTAMP
                 """, (
-                    ticker, 
-                    interval, 
-                    dt_str, 
-                    float(row["Open"]), 
-                    float(row["High"]), 
-                    float(row["Low"]), 
-                    float(row["Close"]), 
+                    ticker,
+                    interval,
+                    dt_str,
+                    float(row["Open"]),
+                    float(row["High"]),
+                    float(row["Low"]),
+                    float(row["Close"]),
                     volume_val
                 ))
             conn.commit()
@@ -90,14 +90,14 @@ class SQLiteStorage:
         """
         start_dt = pd.to_datetime(start_date)
         end_dt = pd.to_datetime(end_date)
-        
+
         # 若為日期字串且無指定時間，將結束時間設為當天最後一秒 (23:59:59)，確保包含日內交易
         if len(str(end_date)) <= 10:
             end_dt = end_dt.replace(hour=23, minute=59, second=59)
-            
+
         start_ts = start_dt.strftime("%Y-%m-%d %H:%M:%S")
         end_ts = end_dt.strftime("%Y-%m-%d %H:%M:%S")
-        
+
         conn = sqlite3.connect(self.db_path)
         try:
             query = """
@@ -107,10 +107,10 @@ class SQLiteStorage:
                 ORDER BY datetime ASC
             """
             df = pd.read_sql_query(query, conn, params=(ticker, interval, start_ts, end_ts))
-            
+
             if df.empty:
                 return pd.DataFrame()
-            
+
             df["datetime"] = pd.to_datetime(df["datetime"])
             df.set_index("datetime", inplace=True)
             df.columns = ["Open", "High", "Low", "Close", "Volume"]

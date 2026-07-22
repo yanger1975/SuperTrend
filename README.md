@@ -6,15 +6,15 @@
 
 ## 1. 系統特點
 
-* **SQLite 本地快取與清洗 (`src/storage.py`, `src/data_loader.py`):** 
+* **SQLite 本地快取與清洗 (`src/storage.py`, `src/data_loader.py`):**
   自動下載並儲存 `yfinance` 的除權息調整價格資料。具備資料一致性校驗規則，避免異常 K 線（例如 High 小於 Close）干擾回測。
-* **交易摩擦與跳空模型 (`src/backtest_engine.py`):** 
+* **交易摩擦與跳空模型 (`src/backtest_engine.py`):**
   支援設定單邊手續費與滑價基點。在日內觸發止損時，若開盤直接跳空突破止損價，系統將以 `Open` 價成交，貼近實盤。
-* **盯市淨值計算 (Mark-to-Market):** 
+* **盯市淨值計算 (Mark-to-Market):**
   持倉期間採用每日盯市計價，而非僅在平倉時更新淨值，確保每日報酬波動的真實性，從而精算 Sharpe 與 Sortino 等指標。
-* **進階風險指標與 Monte Carlo (`src/risk_manager.py`):** 
+* **進階風險指標與 Monte Carlo (`src/risk_manager.py`):**
   支援計算 **Ulcer Index (潰瘍指數)**、**Expectancy (交易期望值)**、最大連續盈虧等指標。並可隨機抽樣進行 5,000 次模擬，輸出 50% 至 99% 的最壞最大回撤風險報告。
-* **Walk-Forward 樣本外優化 (`src/optimizer.py`):** 
+* **Walk-Forward 樣本外優化 (`src/optimizer.py`):**
   支援設定 Train/Test 比例進行樣本外驗證，並可自定義綜合得分公式，產出參數熱力圖，協助您鎖定穩健參數的「高原區 (Plateau)」。
 
 ---

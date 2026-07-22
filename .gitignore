@@ -1,0 +1,12 @@
+# 忽略特定的檔案
+config.env
+secret.txt
+
+# 忽略特定資料夾
+spec/
+.ipynb_checkpoints/
+.pytest_cache/
+__pycache__/
+
+# 忽略所有結尾為 .log 的檔案
+*.db

@@ -28,7 +28,7 @@ def test_supertrend_calculation():
         "Close": [10.1, 11.2, 12.1, 10.9, 9.8, 8.9, 10.2, 11.1, 12.3, 13.1],
         "Volume": [1000] * 10
     })
-    
+
     res_df, trend = compute_supertrend(df, period=3, multiplier=2.0)
     assert "SuperTrend" in res_df.columns
     assert "Trend" in res_df.columns

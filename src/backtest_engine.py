@@ -22,22 +22,22 @@ class BacktestEngine:
     def __init__(self, df: pd.DataFrame):
         self.df = df
 
-    def run(self, 
-            long_only: bool = True, 
-            stop_loss_pct: float = 0.0, 
+    def run(self,
+            long_only: bool = True,
+            stop_loss_pct: float = 0.0,
             take_profit_pct: float = 0.0,
             commission_bps: float = 0.0,  # 單邊交易手續費 (基點，例如 10 bps = 0.0010)
             slippage_bps: float = 0.0,    # 單邊交易滑價 (基點，例如 5 bps = 0.0005)
             position_sizing_mode: str = "fixed_fraction", # "fixed_fraction" 或 "fixed_risk"
             risk_pct: float = 0.01        # 單筆交易承受風險比 (用於 fixed_risk，預設 1% 資金)
             ) -> Tuple[List[Trade], pd.Series, pd.Series]:
-        
+
         trades: List[Trade] = []
-        
+
         # 初始化權益曲線與基準線
         equity = pd.Series(0.0, index=self.df.index)
         equity.iloc[0] = 100000.0
-        
+
         # 基準線 (Buy & Hold)
         initial_close = self.df["Close"].iloc[0]
         benchmark_shares = 100000.0 / initial_close
@@ -48,92 +48,92 @@ class BacktestEngine:
         shares = 0.0
         position = 0  # 0: 空倉, 1: 多頭, -1: 空頭 (本系統以 ETF 長期多頭回測為主)
         active_trade: Optional[Trade] = None
-        
+
         # 費率因子
         comm_factor = commission_bps / 10000.0
         slip_factor = slippage_bps / 10000.0
-        
+
         for i in range(1, len(self.df)):
             current_date = self.df.index[i]
             current_open = self.df["Open"].iloc[i]
             current_high = self.df["High"].iloc[i]
             current_low = self.df["Low"].iloc[i]
             current_close = self.df["Close"].iloc[i]
-            
+
             trend = self.df["Trend"].iloc[i]
             prev_trend = self.df["Trend"].iloc[i-1]
-            
+
             # 1. 持倉狀態下的 Stop-Loss / Take-Profit 檢測
             if position == 1 and active_trade:
                 sl_price = active_trade.entry_price * (1.0 - stop_loss_pct)
                 tp_price = active_trade.entry_price * (1.0 + take_profit_pct)
-                
+
                 # A. 檢查開盤跳空跌破或突破
                 if stop_loss_pct > 0.0 and current_open <= sl_price:
                     # 跳空開低，直接以開盤價止損
                     actual_exit_price = current_open * (1.0 - slip_factor)
                     cash += shares * actual_exit_price * (1.0 - comm_factor)
-                    
+
                     active_trade.exit_price = actual_exit_price
                     active_trade.exit_date = current_date
                     active_trade.pnl_pct = (actual_exit_price - active_trade.entry_price) / active_trade.entry_price
                     active_trade.exit_reason = "StopLoss"
                     active_trade.is_closed = True
-                    
+
                     trades.append(active_trade)
                     shares = 0.0
                     position = 0
                     active_trade = None
                     equity.iloc[i] = cash
                     continue
-                    
+
                 if take_profit_pct > 0.0 and current_open >= tp_price:
                     # 跳空開高，直接以開盤價止利
                     actual_exit_price = current_open * (1.0 - slip_factor)
                     cash += shares * actual_exit_price * (1.0 - comm_factor)
-                    
+
                     active_trade.exit_price = actual_exit_price
                     active_trade.exit_date = current_date
                     active_trade.pnl_pct = (actual_exit_price - active_trade.entry_price) / active_trade.entry_price
                     active_trade.exit_reason = "TakeProfit"
                     active_trade.is_closed = True
-                    
+
                     trades.append(active_trade)
                     shares = 0.0
                     position = 0
                     active_trade = None
                     equity.iloc[i] = cash
                     continue
-                
+
                 # B. 檢查日內同時觸發 (Daily 週期下保守假設止損 SL 優先發生)
                 if stop_loss_pct > 0.0 and current_low <= sl_price and take_profit_pct > 0.0 and current_high >= tp_price:
                     actual_exit_price = sl_price * (1.0 - slip_factor)
                     cash += shares * actual_exit_price * (1.0 - comm_factor)
-                    
+
                     active_trade.exit_price = actual_exit_price
                     active_trade.exit_date = current_date
                     active_trade.pnl_pct = (actual_exit_price - active_trade.entry_price) / active_trade.entry_price
                     active_trade.exit_reason = "StopLoss"
                     active_trade.is_closed = True
-                    
+
                     trades.append(active_trade)
                     shares = 0.0
                     position = 0
                     active_trade = None
                     equity.iloc[i] = cash
                     continue
-                
+
                 # C. 獨立檢查止損或止利
                 if stop_loss_pct > 0.0 and current_low <= sl_price:
                     actual_exit_price = sl_price * (1.0 - slip_factor)
                     cash += shares * actual_exit_price * (1.0 - comm_factor)
-                    
+
                     active_trade.exit_price = actual_exit_price
                     active_trade.exit_date = current_date
                     active_trade.pnl_pct = (actual_exit_price - active_trade.entry_price) / active_trade.entry_price
                     active_trade.exit_reason = "StopLoss"
                     active_trade.is_closed = True
-                    
+
                     trades.append(active_trade)
                     shares = 0.0
                     position = 0
@@ -144,13 +144,13 @@ class BacktestEngine:
                 if take_profit_pct > 0.0 and current_high >= tp_price:
                     actual_exit_price = tp_price * (1.0 - slip_factor)
                     cash += shares * actual_exit_price * (1.0 - comm_factor)
-                    
+
                     active_trade.exit_price = actual_exit_price
                     active_trade.exit_date = current_date
                     active_trade.pnl_pct = (actual_exit_price - active_trade.entry_price) / active_trade.entry_price
                     active_trade.exit_reason = "TakeProfit"
                     active_trade.is_closed = True
-                    
+
                     trades.append(active_trade)
                     shares = 0.0
                     position = 0
@@ -188,27 +188,27 @@ class BacktestEngine:
                     # 買入進場
                     position = 1
                     current_equity = cash
-                    
+
                     # 計算部位 sizing
                     if position_sizing_mode == "fixed_risk" and stop_loss_pct > 0.0:
                         risk_amount = current_equity * risk_pct
                         loss_per_share = current_close * stop_loss_pct
                         shares_to_buy = risk_amount / (loss_per_share + 1e-10)
-                        
+
                         # 限制最多滿倉 (無槓桿)
                         max_shares = current_equity / (current_close * (1.0 + slip_factor) * (1.0 + comm_factor))
                         shares = min(shares_to_buy, max_shares)
                     else:
                         # 預設滿倉
                         shares = current_equity / (current_close * (1.0 + slip_factor) * (1.0 + comm_factor))
-                    
+
                     actual_entry_price = current_close * (1.0 + slip_factor)
                     # 扣除進場總金額 (含手續費)
                     cash -= shares * actual_entry_price * (1.0 + comm_factor)
-                    
+
                     active_trade = Trade(
-                        entry_date=current_date, 
-                        entry_price=actual_entry_price, 
+                        entry_date=current_date,
+                        entry_price=actual_entry_price,
                         direction="Long"
                     )
             else:
@@ -216,13 +216,13 @@ class BacktestEngine:
                 if position == 1 and trend == -1:
                     actual_exit_price = current_close * (1.0 - slip_factor)
                     cash += shares * actual_exit_price * (1.0 - comm_factor)
-                    
+
                     active_trade.exit_price = actual_exit_price
                     active_trade.exit_date = current_date
                     active_trade.pnl_pct = (actual_exit_price - active_trade.entry_price) / active_trade.entry_price
                     active_trade.exit_reason = "Signal"
                     active_trade.is_closed = True
-                    
+
                     trades.append(active_trade)
                     shares = 0.0
                     position = 0
@@ -236,14 +236,14 @@ class BacktestEngine:
             last_date = self.df.index[-1]
             last_close = self.df["Close"].iloc[-1]
             actual_exit_price = last_close * (1.0 - slip_factor)
-            
+
             cash += shares * actual_exit_price * (1.0 - comm_factor)
             active_trade.exit_price = actual_exit_price
             active_trade.exit_date = last_date
             active_trade.pnl_pct = (actual_exit_price - active_trade.entry_price) / active_trade.entry_price
             active_trade.exit_reason = "End"
             active_trade.is_closed = True
-            
+
             trades.append(active_trade)
             shares = 0.0
             position = 0

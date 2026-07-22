@@ -12,9 +12,9 @@ def test_optimizer_train_test_split():
         "Close": [101.0, 102.0, 103.0, 98.0, 97.0, 102.0, 104.0, 105.0, 102.0, 101.0] * 2,
         "Volume": [1000] * 20
     }, index=idx)
-    
+
     optimizer = ParameterOptimizer(df)
-    
+
     # 測試樣本內/樣本外各半 (train_ratio = 0.5)
     train_res, test_res = optimizer.optimize(
         st_periods=[3],
@@ -23,7 +23,7 @@ def test_optimizer_train_test_split():
         target_metric="Custom Score",
         train_ratio=0.5
     )
-    
+
     assert not train_res.empty
     assert not test_res.empty
     assert "Custom Score" in train_res.columns

@@ -66,7 +66,7 @@
       db_path = "test_market_data.db"
       if os.path.exists(db_path):
           os.remove(db_path)
-          
+
       storage = SQLiteStorage(db_path)
       # 構建模擬資料
       idx = pd.to_datetime(["2023-01-01 09:30:00", "2023-01-02 09:30:00"])
@@ -77,16 +77,16 @@
           "Close": [101.0, 102.0],
           "Volume": [1000, 1100]
       }, index=idx)
-      
+
       # 寫入測試
       storage.upsert_prices(df, "SPY", "1d")
-      
+
       # 查詢測試
       df_queried = storage.query_prices("SPY", "1d", "2023-01-01", "2023-01-02")
       assert not df_queried.empty
       assert len(df_queried) == 2
       assert df_queried["Close"].iloc[0] == 101.0
-      
+
       # 重複寫入 (Upsert 衝突) 測試
       df_update = pd.DataFrame({
           "Open": [100.0, 101.0],
@@ -98,7 +98,7 @@
       storage.upsert_prices(df_update, "SPY", "1d")
       df_queried_2 = storage.query_prices("SPY", "1d", "2023-01-01", "2023-01-02")
       assert df_queried_2["Close"].iloc[0] == 105.0
-      
+
       if os.path.exists(db_path):
           os.remove(db_path)
   ```
@@ -163,7 +163,7 @@
           # 將日期字串格式化為資料庫比對的格式
           start_ts = pd.to_datetime(start_date).strftime("%Y-%m-%d %H:%M:%S")
           end_ts = pd.to_datetime(end_date).strftime("%Y-%m-%d %H:%M:%S")
-          
+
           with sqlite3.connect(self.db_path) as conn:
               query = """
                   SELECT datetime, open, high, low, close, volume
@@ -174,7 +174,7 @@
               df = pd.read_sql_query(query, conn, params=(ticker, interval, start_ts, end_ts))
               if df.empty:
                   return pd.DataFrame()
-              
+
               df["datetime"] = pd.to_datetime(df["datetime"])
               df.set_index("datetime", inplace=True)
               # 將欄位名稱首字母大寫以對齊 yfinance 格式
@@ -209,21 +209,21 @@
       db_path = "test_loader_market_data.db"
       if os.path.exists(db_path):
           os.remove(db_path)
-          
+
       loader = DataLoader(db_path=db_path)
       # 第一次獲取：應下載並快取
       df = loader.fetch_data("SPY", start_date="2023-01-01", end_date="2023-01-10", interval="1d")
       assert not df.empty
       assert "Close" in df.columns
-      
+
       # 驗證資料品質清洗規則 (High >= max(Open, Close))
       assert (df["High"] >= df[["Open", "Close"]].max(axis=1)).all()
       assert (df["Low"] <= df[["Open", "Close"]].min(axis=1)).all()
-      
+
       # 第二次獲取：應從本地 SQLite 查出
       df_cached = loader.fetch_data("SPY", start_date="2023-01-01", end_date="2023-01-10", interval="1d")
       assert len(df_cached) == len(df)
-      
+
       if os.path.exists(db_path):
           os.remove(db_path)
   ```
@@ -246,18 +246,18 @@
           df = df.dropna(subset=["Close"]).copy()
           if df.empty:
               return df
-              
+
           # 2. 移除重複索引，保留第一筆
           df = df[~df.index.duplicated(keep="first")]
-          
+
           # 3. 欄位類型轉換與排序
           df.index = pd.to_datetime(df.index)
           df = df.sort_index()
-          
+
           # 4. 防錯價格校驗 (High >= max(Open, Close), Low <= min(Open, Close))
           max_op_cl = df[["Open", "Close"]].max(axis=1)
           min_op_cl = df[["Open", "Close"]].min(axis=1)
-          
+
           df["High"] = np.maximum(df["High"], max_op_cl)
           df["Low"] = np.minimum(df["Low"], min_op_cl)
           return df
@@ -270,18 +270,18 @@
               if not local_df.empty:
                   # 若本地已有資料則返回本地資料
                   return local_df
-                  
+
           # 下載並自動除權息調整
           data = yf.download(ticker, start=start_date, end=end_date, interval=interval, auto_adjust=True)
           if data.empty:
               raise ValueError(f"No data downloaded from yfinance for {ticker}")
-              
+
           if isinstance(data.columns, pd.MultiIndex):
               data.columns = data.columns.get_level_values(0)
-              
+
           # 清洗與校驗
           cleaned_df = self.validate_and_clean_data(data)
-          
+
           # 存入資料庫
           self.storage.upsert_prices(cleaned_df, ticker, interval)
           return cleaned_df
@@ -314,7 +314,7 @@
       prices = pd.Series([10, 11, 12, 11, 10, 9, 10, 11, 12, 13, 14])
       hma_val = compute_hma(prices, period=5)
       assert len(hma_val) == len(prices)
-      
+
       df = pd.DataFrame({
           "High": [10, 11, 12, 11, 12],
           "Low": [9, 10, 11, 10, 11],
@@ -361,7 +361,7 @@
           "ADX_Filter": [True] * 3,
           "RSI_Filter": [True] * 3
       }, index=idx)
-      
+
       # 測試 Gap 止損成交 (Stop Loss 10% 即 90.0, 第三天開盤為 80.0)
       engine = BacktestEngine(df)
       trades, strat_eq, bench_eq = engine.run(long_only=True, stop_loss_pct=0.10)

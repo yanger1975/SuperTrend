@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
+
     <style>
         :root {
             --bg-color: #0b0f19;
@@ -244,7 +244,7 @@
                 <div class="card">
                     <h2>系統高階架構</h2>
                     <p>本系統採用高度解耦的模組化 Package 設計。核心回測與數學計算完全獨立於執行入口，藉此支援高品質的單元測試與研究重現。前台則以 Jupyter Notebook 作為研究沙盒，繪製高質感的 Plotly 互動式圖表。</p>
-                    
+
                     <div class="flowchart">
 [Jupyter Front-End] ── 傳遞參數 ──> [backtest_engine.py]
       │                                     │
@@ -260,7 +260,7 @@
 
                 <div class="card">
                     <h2>模組職責定義</h2>
-                    
+
                     <h3>1. 本地資料儲存層 (src/storage.py)</h3>
                     <ul>
                         <li>建立本地 SQLite 資料庫與初始化表格，快取下載過的歷史 K 線資料。</li>
@@ -301,7 +301,7 @@
 
                 <div class="card">
                     <h2>關鍵設計決策與技術折衷</h2>
-                    
+
                     <div class="decision-block">
                         <h4>A. 採用 SQLite 代替純 CSV 作為快取 <span class="badge-beta">Beta</span></h4>
                         <p>相較於每次載入都讀寫大型 CSV 檔案，SQLite 支援結構化查詢與複合主鍵 Upsert 覆蓋，更易於維護多個標的、多種週期（如日線與小時線）的增量價格更新，讀寫效率高且避免資料重複寫入。</p>

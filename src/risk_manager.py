@@ -33,7 +33,7 @@ class RiskManager:
         # 避免除以 0
         drawdowns = (self.equity - roll_max) / (roll_max + 1e-10)
         max_dd = drawdowns.min()
-        
+
         # 潰瘍指數 UI = sqrt(mean(drawdown_t ^ 2))
         squared_drawdowns = drawdowns ** 2
         ulcer_index = np.sqrt(squared_drawdowns.mean())
@@ -42,13 +42,13 @@ class RiskManager:
         daily_returns = self.equity.pct_change().dropna()
         sharpe = 0.0
         sortino = 0.0
-        
+
         # 假定無風險年化利率為 2%
         rf_daily = 0.02 / 252.0
         if not daily_returns.empty and daily_returns.std() > 0:
             excess_returns = daily_returns - rf_daily
             sharpe = (excess_returns.mean() / daily_returns.std()) * np.sqrt(252.0)
-            
+
             downside_returns = daily_returns[daily_returns < 0]
             # 避免除以 0
             downside_std = downside_returns.std() if len(downside_returns) > 1 else 0.0
@@ -59,27 +59,27 @@ class RiskManager:
         closed_trades = [t for t in self.trades if t.is_closed]
         wins = [t for t in closed_trades if t.pnl_pct > 0]
         losses = [t for t in closed_trades if t.pnl_pct <= 0]
-        
+
         win_rate = len(wins) / len(closed_trades) if closed_trades else 0.0
-        
+
         avg_win = np.mean([t.pnl_pct for t in wins]) if wins else 0.0
         avg_loss = np.mean([t.pnl_pct for t in losses]) if losses else 0.0
-        
+
         # Expectancy 交易期望值
         expectancy = win_rate * avg_win - (1 - win_rate) * abs(avg_loss)
-        
+
         total_gain = sum(t.pnl_pct for t in wins)
         total_loss = sum(abs(t.pnl_pct) for t in losses)
         # 避免除以 0
         profit_factor = total_gain / total_loss if total_loss > 0.0 else (total_gain if total_gain > 0.0 else 1.0)
-        
+
         calmar = cagr / abs(max_dd) if max_dd != 0.0 else 0.0
-        
+
         # 持倉天數與年化交易次數
         holding_days = [(t.exit_date - t.entry_date).days for t in closed_trades if t.exit_date]
         avg_holding_days = float(np.mean(holding_days)) if holding_days else 0.0
         annual_trades = len(closed_trades) / years
-        
+
         # 最大連續盈虧次數
         max_consec_wins = 0
         max_consec_losses = 0
@@ -118,34 +118,34 @@ class RiskManager:
         """
         if seed is not None:
             np.random.seed(seed)
-            
+
         returns = np.array([t.pnl_pct for t in self.trades if t.is_closed])
         if len(returns) == 0:
             return {
-                "drawdowns": np.zeros(runs), 
-                "terminal_values": np.ones(runs) * 100000.0, 
+                "drawdowns": np.zeros(runs),
+                "terminal_values": np.ones(runs) * 100000.0,
                 "percentiles": {k: 0.0 for k in ["50% (Median)", "75%", "90%", "95%", "99%"]}
             }
-            
+
         simulated_max_dds = []
         simulated_terminals = []
-        
+
         for _ in range(runs):
             # 隨機抽樣
             sampled_returns = np.random.choice(returns, size=num_trades, replace=True)
             # 計算淨值增長路徑 (起始資金 10 萬)
             equity_curve = 100000.0 * np.cumprod(1.0 + sampled_returns)
-            
+
             # 計算該路徑的最大回撤
             peaks = np.maximum.accumulate(equity_curve)
             drawdowns = (equity_curve - peaks) / (peaks + 1e-10)
-            
+
             simulated_max_dds.append(drawdowns.min())
             simulated_terminals.append(equity_curve[-1])
-            
+
         simulated_max_dds = np.array(simulated_max_dds)
         simulated_terminals = np.array(simulated_terminals)
-        
+
         # 由於回撤為負值，百分位數越小表示回撤越深 (越差)
         # 例如 95% worst-case 等於從低到高排列的第 5 個百分位數
         percentiles_dd = {
@@ -155,7 +155,7 @@ class RiskManager:
             "95%": float(np.percentile(simulated_max_dds, 5)),
             "99%": float(np.percentile(simulated_max_dds, 1))
         }
-        
+
         return {
             "drawdowns": simulated_max_dds,
             "terminal_values": simulated_terminals,
