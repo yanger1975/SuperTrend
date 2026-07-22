@@ -21,8 +21,8 @@ from typing import List, Dict, Any
 import pandas as pd
 import numpy as np
 
-# 將 spec/ 加入 sys.path 以便 import TrendingScraper
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "spec"))
+# 將 src/ 加入 sys.path 以便 import TrendingScraper
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 from trending_scraper import TrendingScraper
 
 # Import src modules
@@ -90,7 +90,7 @@ def format_metric_md(value, pct_fmt=False):
 
 
 def generate_markdown_report(ticker, args, train_df, test_df, best_row,
-                              trades, metrics, mc_results):
+                              trades, metrics, mc_results, latest_signal=None):
     """產生完整的 Markdown 報告字串。"""
     lines = []
     lines.append(f"# {ticker} 優化回測報告")
@@ -142,6 +142,21 @@ def generate_markdown_report(ticker, args, train_df, test_df, best_row,
     lines.append(f"- **目標指標 ({TARGET_METRIC})**: {best_row['Custom Score']:.4f}")
     lines.append("")
 
+    # --- Latest Market Signal ---
+    if latest_signal:
+        lines.append("## 最新市場狀態與交易訊號")
+        lines.append("")
+        lines.append("| 項目 | 數值 / 狀態 |")
+        lines.append("|------|------------|")
+        lines.append(f"| **最新交易日** | {latest_signal['date']} |")
+        lines.append(f"| **今日收盤價** | {latest_signal['close']:.2f} |")
+        lines.append(f"| **HMA 數值** | {latest_signal['hma_str']} |")
+        lines.append(f"| **SuperTrend 數值** | {latest_signal['supertrend']:.2f} |")
+        lines.append(f"| **當前持倉 (Position)** | {latest_signal['position']} |")
+        lines.append(f"| **{latest_signal['ref_type']}** | {latest_signal['ref_val_str']} |")
+        lines.append("")
+
+
     # --- Transaction History ---
     lines.append("## 完整交易紀錄")
     lines.append("")
@@ -187,6 +202,76 @@ def generate_markdown_report(ticker, args, train_df, test_df, best_row,
             lines.append(f"| {pct_label} | {val * 100:.2f}% |")
     lines.append("")
 
+    return "\n".join(lines)
+
+
+def generate_all_summary_report(results: list, args) -> str:
+    """產生包含所有標的市場狀態與交易訊號的 All.md 報告。"""
+    valid_signals = []
+    for r in results:
+        if r.get("success") and r.get("latest_signal"):
+            sig = r["latest_signal"]
+            ticker = r["ticker"]
+            raw_pos = sig["position"]
+            pos = "long" if raw_pos == "long" else "cash"
+            st_val_str = f"{sig['supertrend']:.2f}"
+            use_hma = sig.get("use_hma", False)
+
+            # 當 Use_HMA 為 False 時，HMA 顯示為 "-"
+            if use_hma and sig["hma_str"] not in ("N/A (未啟用)", "-"):
+                try:
+                    hma_display = f"{float(sig['hma_str']):.2f}"
+                except ValueError:
+                    hma_display = "-"
+            else:
+                hma_display = "-"
+
+            if pos == "long":
+                entry_ref = "-"
+                exit_ref = st_val_str
+                pos_order = 0  # long 排在最前面
+            else:
+                entry_ref = st_val_str
+                exit_ref = "-"
+                pos_order = 1  # cash 排在後面
+
+            valid_signals.append({
+                "ticker": ticker,
+                "date": sig["date"],
+                "close": f"{sig['close']:.2f}",
+                "hma_display": hma_display,
+                "ma_period": sig.get("ma_period", 0),
+                "use_hma": "True" if use_hma else "False",
+                "supertrend": st_val_str,
+                "st_period": sig.get("st_period", 0),
+                "st_multiplier": sig.get("st_multiplier", 0.0),
+                "position": pos,
+                "entry_ref": entry_ref,
+                "exit_ref": exit_ref,
+                "pos_order": pos_order
+            })
+
+    # 排序：Long 排在最前面，同部位群內按 Ticker 字母排序
+    valid_signals.sort(key=lambda x: (x["pos_order"], x["ticker"]))
+
+    latest_date = valid_signals[0]["date"] if valid_signals else args.date
+
+    lines = []
+    lines.append("# 全標的市場狀態與交易訊號總覽")
+    lines.append("")
+    lines.append(f"**Date**: {latest_date}")
+    lines.append("")
+    lines.append("| Ticker | Close Price | HMA | MA_Period | Use_HMA | SuperTrend | ST_Period | ST_Multiplier | Position | Entry Ref | Exit Ref |")
+    lines.append("|--------|-------------|-----|-----------|---------|------------|-----------|---------------|----------|-----------|----------|")
+
+    for item in valid_signals:
+        lines.append(
+            f"| {item['ticker']} | {item['close']} | {item['hma_display']} | "
+            f"{item['ma_period']} | {item['use_hma']} | {item['supertrend']} | "
+            f"{item['st_period']} | {item['st_multiplier']} | {item['position']} | "
+            f"{item['entry_ref']} | {item['exit_ref']} |"
+        )
+    lines.append("")
     return "\n".join(lines)
 
 
@@ -293,25 +378,74 @@ def process_ticker(ticker, args):
         if len(trades) >= 10:
             mc_results = rm.run_monte_carlo(runs=5000, num_trades=min(50, len(trades)), seed=42)
 
-        # 3d. 產出 Markdown
+        # 3d. 計算最新市場狀態與交易訊號
+        last_row = df_indicators.iloc[-1]
+        last_idx = df_indicators.index[-1]
+        if hasattr(last_idx, "strftime"):
+            latest_date_str = last_idx.strftime("%Y-%m-%d")
+        else:
+            latest_date_str = str(last_idx)[:10]
+
+        close_val = float(last_row["Close"])
+        st_val = float(last_row["SuperTrend"])
+
+        if best_use_hma and "HMA" in df_indicators.columns and pd.notna(last_row["HMA"]):
+            hma_val = float(last_row["HMA"])
+            hma_str = f"{hma_val:.2f}"
+        else:
+            hma_val = None
+            hma_str = "N/A (未啟用)"
+
+        # 訊號判定邏輯：
+        # 1. 若今日收盤價 > HMA 且 > Supertrend -> position: long, 出場參考點: SuperTrend 數值
+        # 2. 若今日收盤價 < SuperTrend -> position: cash（觀望 / 未持倉）, 進場參考點: SuperTrend 數值
+        # 3. 若啟用 HMA 且 SuperTrend < Close <= HMA -> position: cash（觀望）, 未滿足 HMA 過濾條件
+        if close_val > st_val and (not best_use_hma or (hma_val is not None and close_val > hma_val)):
+            position = "long"
+            ref_type = "出場參考點 (Stop-Loss)"
+            ref_val_str = f"{st_val:.2f}"
+        elif close_val < st_val:
+            position = "cash（觀望 / 未持倉）"
+            ref_type = "進場參考點 (Entry Ref)"
+            ref_val_str = f"{st_val:.2f}"
+        else:
+            position = "cash（觀望）"
+            ref_type = "交易備註"
+            ref_val_str = f"未滿足 HMA 過濾條件 (HMA={hma_str})"
+
+        latest_signal = {
+            "date": latest_date_str,
+            "close": close_val,
+            "hma_str": hma_str,
+            "supertrend": st_val,
+            "position": position,
+            "ref_type": ref_type,
+            "ref_val_str": ref_val_str,
+            "st_period": best_period,
+            "st_multiplier": best_mult,
+            "ma_period": best_ma,
+            "use_hma": best_use_hma
+        }
+
+        # 3e. 產出 Markdown
         out_dir = os.path.join("data", args.date)
         os.makedirs(out_dir, exist_ok=True)
         out_path = os.path.join(out_dir, f"{ticker}.md")
 
         report = generate_markdown_report(
             ticker, args, train_df, test_df, best,
-            trades, metrics, mc_results
+            trades, metrics, mc_results, latest_signal=latest_signal
         )
 
         with open(out_path, "w", encoding="utf-8") as f:
             f.write(report)
 
         print(f"[{ticker}] 報告已輸出: {out_path}")
-        return {"ticker": ticker, "success": True, "path": out_path, "error": None}
+        return {"ticker": ticker, "success": True, "path": out_path, "error": None, "latest_signal": latest_signal}
 
     except Exception as e:
         print(f"[{ticker}] 處理失敗: {e}")
-        return {"ticker": ticker, "success": False, "path": None, "error": str(e)}
+        return {"ticker": ticker, "success": False, "path": None, "error": str(e), "latest_signal": None}
 
 
 def main():
@@ -393,6 +527,14 @@ Examples:
     if failed:
         for r in failed:
             print(f"  FAIL {r['ticker']} -> {r['error']}")
+
+    # 產出 All.md 總覽報告
+    if success:
+        all_md_content = generate_all_summary_report(results, args)
+        all_md_path = os.path.join("data", args.date, "All.md")
+        with open(all_md_path, "w", encoding="utf-8") as f:
+            f.write(all_md_content)
+        print(f"  OK  All Summary -> {all_md_path}")
 
     print(f"報告目錄: data/{args.date}/")
 
