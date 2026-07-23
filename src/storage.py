@@ -80,6 +80,24 @@ class SQLiteStorage:
         finally:
             conn.close()
 
+    def _safe_float(self, value, default=None):
+        """
+        Safely convert a value to float, handling None and NaN values.
+
+        Args:
+            value: The value to convert
+            default: The default value to return if conversion fails (None by default)
+
+        Returns:
+            float: The converted value or default
+        """
+        if value is None or (isinstance(value, float) and pd.isna(value)):
+            return default
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return default
+
     def upsert_prices(self, df: pd.DataFrame, ticker: str, interval: str):
         """
         將 DataFrame 價格資料以 upsert 方式寫入/更新至資料庫。
@@ -200,13 +218,13 @@ class SQLiteStorage:
             """, (
                 ticker, start_date, end_date, int(st_period), float(st_multiplier),
                 int(ma_period), 1 if use_hma_filter else 0,
-                float(custom_score) if custom_score is not None and not pd.isna(custom_score) else None,
-                float(cagr) if cagr is not None and not pd.isna(cagr) else None,
-                float(max_drawdown) if max_drawdown is not None and not pd.isna(max_drawdown) else None,
-                float(sharpe_ratio) if sharpe_ratio is not None and not pd.isna(sharpe_ratio) else None,
-                float(calmar_ratio) if calmar_ratio is not None and not pd.isna(calmar_ratio) else None,
-                float(win_rate) if win_rate is not None and not pd.isna(win_rate) else None,
-                float(profit_factor) if profit_factor is not None and not pd.isna(profit_factor) else None
+                self._safe_float(custom_score),
+                self._safe_float(cagr),
+                self._safe_float(max_drawdown),
+                self._safe_float(sharpe_ratio),
+                self._safe_float(calmar_ratio),
+                self._safe_float(win_rate),
+                self._safe_float(profit_factor)
             ))
             conn.commit()
         finally:
@@ -265,9 +283,9 @@ class SQLiteStorage:
                 ticker, start_date, end_date,
                 float(close_price), float(supertrend),
                 int(position),
-                float(entry_ref) if entry_ref is not None and not pd.isna(entry_ref) else None,
-                float(exit_ref) if exit_ref is not None and not pd.isna(exit_ref) else None,
-                float(hma) if hma is not None and not pd.isna(hma) else 0.0
+                self._safe_float(entry_ref),
+                self._safe_float(exit_ref),
+                self._safe_float(hma, 0.0)  # Default to 0.0 for hma if None/NaN
             ))
             conn.commit()
         finally:
