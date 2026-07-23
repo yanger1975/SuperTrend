@@ -9,4 +9,4 @@ spec/
 __pycache__/
 
 # 忽略所有結尾為 .log 的檔案
-*.db
+

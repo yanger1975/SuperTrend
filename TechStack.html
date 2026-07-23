@@ -247,13 +247,14 @@
 
                     <div class="flowchart">
 [CLI / Jupyter 入口] ──(1) 呼叫資料庫／網路──> [data_loader.py]
-  (run_batch_optimization)                          │
-  (run_optimization.py)                      優先檢索/增量快取
-  (Notebook Cell)                                   v
+  (run_daily_scanner.py)                            │
+  (run_batch_optimization)                   優先檢索/增量快取
+  (run_optimization.py)                             v
                                            [storage.py] (SQLite DB)
 [optimizer.py] <──(2) 網格優化 & 回測── [price_history / supertrend_params]
        │                                            ▲
  (3) 產出報告 & 訊號存庫                             │
+       ├─── Telegram 報告 ──> [telegram_notifier.py] ──> Telegram Bot API
        ├─── Markdown 報告 ──> data/{date}/{ticker}.md / All.md
        └─── 持久化寫入 ──────> supertrend_params & stock_signals</div>
                 </div>
@@ -304,6 +305,18 @@
                     <ul>
                         <li>**多標的批次執行 (`run_batch_optimization.py`)**：自動收集標的（Most Active + Must Have），採用多執行緒 (`ThreadPoolExecutor`) 並行跑優化與回測。</li>
                         <li>**報告生成**：自動產出個股 Markdown 報告與 `All.md` 全標的總覽報告（`long` 持倉標的自動置頂排序）。</li>
+                    </ul>
+
+                    <h3>8. Telegram 通知發送模組 (src/telegram_notifier.py)</h3>
+                    <ul>
+                        <li>封裝 Telegram Bot API，支援 HTML 格式化訊息與自動重試機制。</li>
+                        <li>**長訊息分拆**：自動將超過 3,500 字元之診斷報告切分成多段發送，防止超過 Telegram API 上限。</li>
+                    </ul>
+
+                    <h3>9. 每日交易訊號掃描腳本 (run_daily_scanner.py)</h3>
+                    <ul>
+                        <li>**標的與優化判斷**：每日掃描熱門美股與必備標的，新標的自動網格優化，舊標的搜尋與目前日期最近 end_date 之最適參數，每週六自動執行全標的重新優化。</li>
+                        <li>**訊號變動追蹤**：比較前日與當日持倉狀態，精準辨識 `NEW_BUY` (新進場)、`NEW_SELL` (新平倉/止損)、`HOLD_LONG` (持倉中) 與 `WAIT_CASH` (觀望標的) 並發送報告。</li>
                     </ul>
                 </div>
 
