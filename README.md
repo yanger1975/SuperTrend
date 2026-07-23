@@ -106,9 +106,14 @@ python -m notebook SuperTrend_Backtester.ipynb
 用於每日自動掃描熱門美股與必備標的，判斷新舊標的參數優化狀態，更新最新訊號並透過 Telegram 發送診斷報告：
 
 ```bash
-# 設定 Telegram 憑證環境變數
+# 設定 Telegram 憑證（支援環境變數或執行目錄下的 .env 檔案）
+# 方式 A：設定系統環境變數
 export TELEGRAM_BOT_TOKEN="your_bot_token"
 export TELEGRAM_CHAT_ID="your_chat_id"
+
+# 方式 B：在專案根目錄建立 .env 檔案
+# TELEGRAM_BOT_TOKEN=your_bot_token
+# TELEGRAM_CHAT_ID=your_chat_id
 
 # 執行每日掃描並發送 Telegram 報告
 python run_daily_scanner.py
@@ -129,6 +134,9 @@ python run_daily_scanner.py --force-reoptimize
 | `--tickers` | `list` | `None` | 附加或指定的股票標的清單（例如 `--tickers TSLA NVDA`）。 |
 | `--dry-run` | `flag` | `False` | 僅在 Console 印出診斷報告內容，不實際呼叫 Telegram API。 |
 | `--db-path` | `str` | `"data/market_data.db"` | SQLite 資料庫檔案路徑。 |
+
+### D. GitHub Actions 自動化雲端部署 (`.github/workflows/daily_signals.yml`)
+本專案已內建完整的 GitHub Actions 自動化工作流。每逢平日美股收盤自動計算訊號並推播至 Telegram；每逢週六自動觸發全標的參數網格重新優化，並將更新後的 SQLite 資料庫自動 Push 存回 Git 倉庫。
 
 ---
 

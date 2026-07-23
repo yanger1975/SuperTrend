@@ -7,8 +7,9 @@ def test_telegram_notifier_configured():
     notifier = TelegramNotifier(bot_token="test_token", chat_id="12345")
     assert notifier.is_configured() is True
 
-    notifier_empty = TelegramNotifier(bot_token="", chat_id="")
-    assert notifier_empty.is_configured() is False
+    with patch.dict("os.environ", {}, clear=True):
+        notifier_empty = TelegramNotifier(bot_token="", chat_id="", env_path="")
+        assert notifier_empty.is_configured() is False
 
 
 def test_split_message():
@@ -56,3 +57,18 @@ def test_send_message_failure_retry(mock_post):
 
     assert success is False
     assert mock_post.call_count == 2
+
+
+def test_telegram_notifier_read_env_file(tmp_path):
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        'TELEGRAM_BOT_TOKEN="token_from_env_file"\nTELEGRAM_CHAT_ID=\'chat_id_from_env_file\'\n',
+        encoding="utf-8"
+    )
+
+    with patch.dict("os.environ", {}, clear=True):
+        notifier = TelegramNotifier(env_path=str(env_file))
+        assert notifier.is_configured() is True
+        assert notifier.bot_token == "token_from_env_file"
+        assert notifier.chat_id == "chat_id_from_env_file"
+

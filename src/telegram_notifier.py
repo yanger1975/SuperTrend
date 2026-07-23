@@ -14,14 +14,58 @@ except ImportError:
     pass
 
 
+def _read_env_file(env_path: str = ".env") -> dict:
+    """
+    自訂 .env 檔案解析器（無需依賴外部套件）。
+    支援讀取執行目錄下 .env 中的 KEY=VALUE 設定。
+    """
+    env_vars = {}
+    if os.path.exists(env_path):
+        try:
+            with open(env_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("#") or "=" not in line:
+                        continue
+                    key, value = line.split("=", 1)
+                    key = key.strip()
+                    value = value.strip().strip('"').strip("'")
+                    env_vars[key] = value
+        except Exception as e:
+            logger.warning(f"讀取 .env 檔案時發生錯誤: {e}")
+    return env_vars
+
+
 class TelegramNotifier:
     """
     Telegram Bot 通知發送模組
     支援 HTML 格式排版、訊息切分（長度限制）與重試機制。
+    支援自動從系統環境變數與執行目錄下的 .env 檔案讀取憑證。
     """
-    def __init__(self, bot_token: Optional[str] = None, chat_id: Optional[str] = None):
-        self.bot_token = bot_token or os.environ.get("TELEGRAM_BOT_TOKEN")
-        self.chat_id = chat_id or os.environ.get("TELEGRAM_CHAT_ID")
+    def __init__(
+        self,
+        bot_token: Optional[str] = None,
+        chat_id: Optional[str] = None,
+        env_path: str = ".env"
+    ):
+        # 1. 優先使用帶入參數
+        self.bot_token = bot_token
+        self.chat_id = chat_id
+
+        # 2. 次要從系統環境變數讀取
+        if not self.bot_token:
+            self.bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+        if not self.chat_id:
+            self.chat_id = os.environ.get("TELEGRAM_CHAT_ID")
+
+        # 3. 再次從執行目錄下 .env 檔案讀取
+        if not self.bot_token or not self.chat_id:
+            env_file_vars = _read_env_file(env_path)
+            if not self.bot_token:
+                self.bot_token = env_file_vars.get("TELEGRAM_BOT_TOKEN")
+            if not self.chat_id:
+                self.chat_id = env_file_vars.get("TELEGRAM_CHAT_ID")
+
         self.api_url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage" if self.bot_token else ""
 
     def is_configured(self) -> bool:
