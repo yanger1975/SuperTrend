@@ -1,6 +1,7 @@
 import sqlite3
 import pandas as pd
 import os
+import json
 from typing import Optional
 
 class SQLiteStorage:
@@ -8,16 +9,22 @@ class SQLiteStorage:
     SQLite 本地歷史價格儲存層
     負責資料庫 schema 初始化，並提供 upsert 增量寫入與區間查詢功能。
     """
-    def __init__(self, db_path: str = "data/market_data.db"):
+    def __init__(self, db_path: str = "data/market_data.db", json_path: Optional[str] = None):
         self.db_path = db_path
         db_dir = os.path.dirname(db_path)
         if db_dir and not os.path.exists(db_dir):
             os.makedirs(db_dir)
+
+        if json_path is None:
+            self.json_path = os.path.join(db_dir, "optimized_params.json") if db_dir else "optimized_params.json"
+        else:
+            self.json_path = json_path
+
         self._init_db()
 
     def _init_db(self):
         """
-        初始化資料庫，建立 price_history 表格
+        初始化資料庫，建立 price_history 表格，並於必要時自動從 JSON 恢復優化參數。
         """
         conn = sqlite3.connect(self.db_path)
         try:
@@ -77,6 +84,12 @@ class SQLiteStorage:
                 )
             """)
             conn.commit()
+
+            # 若 supertrend_params 為空且 JSON 檔案存在，自動恢復參數
+            cursor.execute("SELECT COUNT(*) FROM supertrend_params")
+            count = cursor.fetchone()[0]
+            if count == 0 and os.path.exists(self.json_path):
+                self.import_params_from_json(self.json_path)
         finally:
             conn.close()
 
@@ -227,8 +240,101 @@ class SQLiteStorage:
                 self._safe_float(profit_factor)
             ))
             conn.commit()
+            self.export_params_to_json(self.json_path)
         finally:
             conn.close()
+
+    def export_params_to_json(self, json_path: Optional[str] = None) -> bool:
+        """
+        將 supertrend_params 資料表中的所有優化參數匯出為 JSON 檔案。
+        """
+        target_json = json_path or self.json_path
+        conn = sqlite3.connect(self.db_path)
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM supertrend_params ORDER BY ticker, start_date, end_date")
+            columns = [d[0] for d in cursor.description]
+            rows = cursor.fetchall()
+            params_list = []
+            for r in rows:
+                item = dict(zip(columns, r))
+                item["use_hma_filter"] = bool(item.get("use_hma_filter"))
+                params_list.append(item)
+
+            json_dir = os.path.dirname(target_json)
+            if json_dir and not os.path.exists(json_dir):
+                os.makedirs(json_dir)
+
+            with open(target_json, "w", encoding="utf-8") as f:
+                json.dump(params_list, f, indent=2, ensure_ascii=False)
+            return True
+        except Exception as e:
+            print(f"匯出參數至 JSON 失敗: {e}")
+            return False
+        finally:
+            conn.close()
+
+    def import_params_from_json(self, json_path: Optional[str] = None) -> bool:
+        """
+        從 JSON 檔案將優化參數匯入至 supertrend_params 資料表。
+        """
+        target_json = json_path or self.json_path
+        if not os.path.exists(target_json):
+            return False
+
+        try:
+            with open(target_json, "r", encoding="utf-8") as f:
+                params_list = json.load(f)
+
+            if not isinstance(params_list, list):
+                return False
+
+            conn = sqlite3.connect(self.db_path)
+            try:
+                cursor = conn.cursor()
+                for item in params_list:
+                    cursor.execute("""
+                        INSERT INTO supertrend_params (
+                            ticker, start_date, end_date, st_period, st_multiplier,
+                            ma_period, use_hma_filter, custom_score, cagr, max_drawdown,
+                            sharpe_ratio, calmar_ratio, win_rate, profit_factor
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ON CONFLICT(ticker, start_date, end_date) DO UPDATE SET
+                            st_period=excluded.st_period,
+                            st_multiplier=excluded.st_multiplier,
+                            ma_period=excluded.ma_period,
+                            use_hma_filter=excluded.use_hma_filter,
+                            custom_score=excluded.custom_score,
+                            cagr=excluded.cagr,
+                            max_drawdown=excluded.max_drawdown,
+                            sharpe_ratio=excluded.sharpe_ratio,
+                            calmar_ratio=excluded.calmar_ratio,
+                            win_rate=excluded.win_rate,
+                            profit_factor=excluded.profit_factor,
+                            updated_at=CURRENT_TIMESTAMP
+                    """, (
+                        item["ticker"],
+                        item["start_date"],
+                        item["end_date"],
+                        int(item["st_period"]),
+                        float(item["st_multiplier"]),
+                        int(item["ma_period"]),
+                        1 if item.get("use_hma_filter") else 0,
+                        self._safe_float(item.get("custom_score")),
+                        self._safe_float(item.get("cagr")),
+                        self._safe_float(item.get("max_drawdown")),
+                        self._safe_float(item.get("sharpe_ratio")),
+                        self._safe_float(item.get("calmar_ratio")),
+                        self._safe_float(item.get("win_rate")),
+                        self._safe_float(item.get("profit_factor"))
+                    ))
+                conn.commit()
+            finally:
+                conn.close()
+            return True
+        except Exception as e:
+            print(f"從 JSON 匯入參數失敗: {e}")
+            return False
 
     def query_supertrend_params(self, ticker: str, start_date: str = None, end_date: str = None) -> pd.DataFrame:
         """

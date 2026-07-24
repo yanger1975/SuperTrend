@@ -5,12 +5,15 @@ from src.storage import SQLiteStorage
 
 def test_sqlite_storage_flow():
     db_path = "test_market_data.db"
+    json_path = "test_market_data_optimized_params.json"
     # 清理舊的測試資料庫
     if os.path.exists(db_path):
         os.remove(db_path)
+    if os.path.exists(json_path):
+        os.remove(json_path)
 
     try:
-        storage = SQLiteStorage(db_path)
+        storage = SQLiteStorage(db_path, json_path=json_path)
 
         # 1. 構建測試資料
         idx = pd.to_datetime(["2023-01-01 09:30:00", "2023-01-02 09:30:00"])
@@ -136,5 +139,43 @@ def test_sqlite_storage_flow():
 
     finally:
         # 清理測試產生的資料庫檔案
+        test_json = "test_market_data_optimized_params.json"
         if os.path.exists(db_path):
             os.remove(db_path)
+        if os.path.exists(test_json):
+            os.remove(test_json)
+
+
+def test_json_import_export_sync(tmp_path):
+    db_path = str(tmp_path / "test_sync.db")
+    json_path = str(tmp_path / "test_sync_params.json")
+
+    storage = SQLiteStorage(db_path, json_path=json_path)
+
+    # 1. 寫入參數，測試是否自動匯出至 JSON
+    storage.save_supertrend_params(
+        ticker="QQQ",
+        start_date="2021-01-01",
+        end_date="2023-01-01",
+        st_period=12,
+        st_multiplier=3.5,
+        ma_period=200,
+        use_hma_filter=True,
+        cagr=0.25
+    )
+
+    assert os.path.exists(json_path)
+
+    # 2. 刪除資料庫，只留 JSON
+    if os.path.exists(db_path):
+        os.remove(db_path)
+
+    # 3. 重新初始化 SQLiteStorage（全新資料庫），驗證是否會自動從 JSON 恢復參數
+    new_storage = SQLiteStorage(db_path, json_path=json_path)
+    res_df = new_storage.query_supertrend_params("QQQ", "2021-01-01", "2023-01-01")
+
+    assert not res_df.empty
+    assert res_df["st_period"].iloc[0] == 12
+    assert res_df["st_multiplier"].iloc[0] == 3.5
+    assert res_df["cagr"].iloc[0] == 0.25
+

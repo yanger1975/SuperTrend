@@ -266,7 +266,7 @@
                     <ul>
                         <li>建立與初始化 SQLite 資料庫 (`data/market_data.db`)。</li>
                         <li>**`price_history` 表格**：實作 `upsert_prices` 方法，使用 `(ticker, interval, datetime)` 主鍵避免重複資料。</li>
-                        <li>**`supertrend_params` 表格**：實作 `save_supertrend_params` 與 `query_supertrend_params`，儲存各標的最適參數 (`ST_Period`, `ST_Multiplier`, `MA_Period`, `Use_HMA_Filter`) 及風控回測指標。</li>
+                        <li>**`supertrend_params` 表格與 JSON 雙向同步**：實作 `save_supertrend_params` 與 `query_supertrend_params`，儲存各標的最適參數 (`ST_Period`, `ST_Multiplier`, `MA_Period`, `Use_HMA_Filter`) 及風控回測指標；並提供 `export_params_to_json` / `import_params_from_json` 自動同步至 `data/optimized_params.json`。</li>
                         <li>**`stock_signals` 表格**：實作 `save_stock_signals` 與 `query_stock_signals`，儲存標的最新持倉狀態 (`1=long`, `0=cash`)、進場參考點 (`entry_ref`)、出場參考點 (`exit_ref`)、`close_price` 與 `hma` 數值。</li>
                     </ul>
 
@@ -336,6 +336,11 @@
                     <div class="decision-block">
                         <h4>C. 順勢過濾器選用：HMA vs. 傳統 SMA/EMA</h4>
                         <p>HMA 藉由 WMA 權重進行延遲修正，反應速度快於傳統 SMA。系統保留自適應切換，供優化器自動決定是否啟用 HMA 過濾器。</p>
+                    </div>
+
+                    <div class="decision-block">
+                        <h4>D. SQLite 本地快取與 JSON 跨環境雙向同步 (Stateless CI/CD)</h4>
+                        <p>SQLite 資料庫 (`market_data.db`) 作為本地高效運算快取，加入 `.gitignore` 避免二進位 Commit 衝突與 Git 體積暴增；同時將最適參數自動雙向同步為輕量化 `data/optimized_params.json` 存入 Git 追蹤，使 GitHub Actions 等無狀態雲端環境能秒級恢復參數並進行即時掃描。</p>
                     </div>
                 </div>
             </div>

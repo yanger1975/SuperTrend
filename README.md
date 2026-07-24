@@ -8,7 +8,7 @@
 
 * **SQLite 本地快取與持久化 (`src/storage.py`, `src/data_loader.py`):**
   * **價格歷史 (`price_history`)**：自動下載並儲存 `yfinance` 的除權息調整價格資料，具備資料一致性校驗規則，避免異常 K 線（例如 High 小於 Close）干擾回測。
-  - **最適參數 (`supertrend_params`)**：自動將優化計算出的最佳 SuperTrend / HMA 參數組合及 CAGR、Max Drawdown、Sharpe Ratio 等績效指標儲存至資料庫。
+  - **最適參數與 JSON 版控 (`supertrend_params` & `data/optimized_params.json`)**：將優化計算出的最佳 SuperTrend / HMA 參數組合及 CAGR、Max Drawdown 等指標儲存至 SQLite，並自動雙向同步至輕量化 `data/optimized_params.json`。在 GitHub Actions 等 CI/CD 無狀態環境中，系統會自動從 JSON 恢復優化參數，避免重複優化運算。
   - **市場狀態與訊號 (`stock_signals`)**：即時儲存標的最新交易日的持倉狀態 (`1=long`, `0=cash`)、進場參考點 (`Entry Ref`)、出場參考點 (`Exit Ref`)、收盤價與 HMA 數值。
 * **多標的自動化批次處理 (`run_batch_optimization.py`):**
   * 自動收集熱門股票 (Most Active) 與必備清單 (Must Have, 如 SPY, QQQM, SMH, GLD, VNQ)。
@@ -136,7 +136,7 @@ python run_daily_scanner.py --force-reoptimize
 | `--db-path` | `str` | `"data/market_data.db"` | SQLite 資料庫檔案路徑。 |
 
 ### D. GitHub Actions 自動化雲端部署 (`.github/workflows/daily_signals.yml`)
-本專案已內建完整的 GitHub Actions 自動化工作流。每逢平日美股收盤自動計算訊號並推播至 Telegram；每逢週六自動觸發全標的參數網格重新優化，並將更新後的 SQLite 資料庫自動 Push 存回 Git 倉庫。
+本專案已內建完整的 GitHub Actions 自動化工作流。每逢平日美股收盤自動計算訊號並推播至 Telegram；每逢週六自動觸發全標的參數網格重新優化，並將更新後的最適參數檔案 (`data/optimized_params.json`) 自動 Push 存回 Git 倉庫。
 
 ---
 
@@ -146,10 +146,12 @@ python run_daily_scanner.py --force-reoptimize
 - **個股報告 (`data/{yyyyMMdd}/{ticker}.md`)**：包含樣本內/外 Top 5 參數、最佳參數、最新市場狀態與交易訊號、完整交易紀錄與 Monte Carlo 評估。
 - **全標的總覽報告 (`data/{yyyyMMdd}/All.md`)**：整合所有標的最新收盤價、HMA、SuperTrend、最適參數、當前持倉 (`long` / `cash`) 與進出場參考點 (`Entry Ref` / `Exit Ref`)，`long` 持倉自動排序於最上方。
 
-### B. SQLite 資料庫 (`data/market_data.db`)
-- `price_history`: 儲存歷史 OHLCV K 線價格資料 (主鍵: `ticker, interval, datetime`)。
-- `supertrend_params`: 儲存各標的最適參數與績效指標 (主鍵: `ticker, start_date, end_date`)。
-- `stock_signals`: 儲存最新交易日持倉狀態 (1=long, 0=cash)、進出場參考點與 HMA 數值 (主鍵: `ticker, start_date, end_date`)。
+### B. SQLite 資料庫與 JSON 版控
+- `data/market_data.db` (本地快取資料庫):
+  - `price_history`: 儲存歷史 OHLCV K 線價格資料 (主鍵: `ticker, interval, datetime`)。
+  - `supertrend_params`: 儲存各標的最適參數與績效指標 (主鍵: `ticker, start_date, end_date`)。
+  - `stock_signals`: 儲存最新交易日持倉狀態 (1=long, 0=cash)、進出場參考點與 HMA 數值 (主鍵: `ticker, start_date, end_date`)。
+- `data/optimized_params.json`: 輕量化 JSON 格式之最適參數備份檔案，負責跨環境（如 GitHub Actions CI/CD）與 Git 版本控制之參數同步。
 
 ---
 
