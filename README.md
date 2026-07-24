@@ -10,8 +10,8 @@
   * **價格歷史 (`price_history`)**：自動下載並儲存 `yfinance` 的除權息調整價格資料，具備資料一致性校驗規則，避免異常 K 線（例如 High 小於 Close）干擾回測。
   - **最適參數與 JSON 版控 (`supertrend_params` & `data/optimized_params.json`)**：將優化計算出的最佳 SuperTrend / HMA 參數組合及 CAGR、Max Drawdown 等指標儲存至 SQLite，並自動雙向同步至輕量化 `data/optimized_params.json`。在 GitHub Actions 等 CI/CD 無狀態環境中，系統會自動從 JSON 恢復優化參數，避免重複優化運算。
   - **市場狀態與訊號 (`stock_signals`)**：即時儲存標的最新交易日的持倉狀態 (`1=long`, `0=cash`)、進場參考點 (`Entry Ref`)、出場參考點 (`Exit Ref`)、收盤價與 HMA 數值。
-* **多標的自動化批次處理 (`run_batch_optimization.py`):**
-  * 自動收集熱門股票 (Most Active) 與必備清單 (Must Have, 如 SPY, QQQM, SMH, GLD, VNQ)。
+* **多標的自動化批次處理 (`run_batch_optimization.py` & `run_daily_scanner.py`):**
+  * 自動讀取必備清單 (`data/must_have.json`) 並結合 `TrendingScraper` 爬取熱門股票（自動下載與備援更新至 `data/most-active.json`）。
   * 使用多執行緒 (ThreadPoolExecutor) 並行執行多標的參數優化與回測。
   * 自動生成各標的 Markdown 回測報告 (`data/{yyyyMMdd}/{ticker}.md`) 以及全標的總覽報告 [`data/{yyyyMMdd}/All.md`](file:///d:/MyProj/SuperTrend/data/20260722/All.md)。
 * **交易摩擦與跳空模型 (`src/backtest_engine.py`):**
@@ -136,7 +136,7 @@ python run_daily_scanner.py --force-reoptimize
 | `--db-path` | `str` | `"data/market_data.db"` | SQLite 資料庫檔案路徑。 |
 
 ### D. GitHub Actions 自動化雲端部署 (`.github/workflows/daily_signals.yml`)
-本專案已內建完整的 GitHub Actions 自動化工作流。每逢平日美股收盤自動計算訊號並推播至 Telegram；每逢週六自動觸發全標的參數網格重新優化，並將更新後的最適參數檔案 (`data/optimized_params.json`) 自動 Push 存回 Git 倉庫。
+本專案已內建完整的 GitHub Actions 自動化工作流。每逢平日美股收盤自動計算訊號並推播至 Telegram；每逢週六自動觸發全標的參數網格重新優化，並將更新後的最適參數檔案與最新熱門股票清單 (`data/optimized_params.json` 與 `data/most-active.json`) 自動 Push 存回 Git 倉庫。
 
 ---
 

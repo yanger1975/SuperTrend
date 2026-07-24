@@ -13,7 +13,7 @@ class TrendingScraper:
     具備網路異常時的自動備援 (Fallback) 處理。
     成功爬取時會自動更新備援清單。
     """
-    def __init__(self, fallback_file: str = "data/fallback_tickers.json"):
+    def __init__(self, fallback_file: str = "data/most-active.json"):
         self.fallback_file = fallback_file
         self.url = "https://stockmarketwatch.com/screen/most-active"
         self.logger = logging.getLogger(__name__)

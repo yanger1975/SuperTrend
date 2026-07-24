@@ -17,6 +17,7 @@ Usage:
 """
 
 import argparse
+import json
 import sys
 import os
 import logging
@@ -24,6 +25,13 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Any, Tuple
 import pandas as pd
 import numpy as np
+
+# Ensure stdout supports UTF-8 (e.g. for printing emojis on Windows console)
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 # 將 src/ 加入 sys.path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
@@ -38,19 +46,36 @@ from src.telegram_notifier import TelegramNotifier
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-MUST_HAVE_TICKERS = ["SPY", "QQQM", "SMH", "GLD", "VNQ"]
-
 ST_PERIODS = [5, 10, 15, 20, 25, 30]
 ST_MULTIPLIERS = [2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
 MA_PERIODS = [0, 25, 50, 75, 100, 125]
 TRAIN_RATIO = 0.70
 
 
-def get_target_tickers(extra_tickers: List[str] = None) -> List[str]:
-    """收集掃描標的（Trending + Must Have + Extra）。"""
-    tickers = list(MUST_HAVE_TICKERS)
+def load_must_have_tickers(json_path: str = "data/must_have.json") -> List[str]:
+    """從 JSON 檔案載入必備標的清單。"""
+    if os.path.exists(json_path):
+        try:
+            with open(json_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, list):
+                    return data
+        except Exception as e:
+            logger.warning(f"載入 must_have.json 失敗: {e}")
+    return ["SPY", "QQQM", "SMH", "GLD", "VNQ"]
+
+
+def get_target_tickers(
+    extra_tickers: List[str] = None,
+    must_have_path: str = "data/must_have.json",
+    fallback_file: str = "data/most-active.json"
+) -> List[str]:
+    """收集掃描標的（Must Have + Trending/Most Active + Extra）。"""
+    must_have = load_must_have_tickers(must_have_path)
+    tickers = list(must_have)
+
     try:
-        scraper = TrendingScraper()
+        scraper = TrendingScraper(fallback_file=fallback_file)
         trending = scraper.fetch_top_tickers(limit=10)
         for t in trending:
             if t not in tickers:
