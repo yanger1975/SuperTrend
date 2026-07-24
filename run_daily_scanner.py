@@ -231,6 +231,18 @@ def build_telegram_report(date_str: str, signals: List[Dict[str, Any]]) -> str:
     hold_long = [s for s in signals if s["signal_state"] == "HOLD_LONG"]
     wait_cash = [s for s in signals if s["signal_state"] == "WAIT_CASH"]
 
+    def fmt_ticker_params(s: Dict[str, Any]) -> str:
+        param = s.get("param") or {}
+        st_period = param.get("ST_Period")
+        st_mult = param.get("ST_Multiplier")
+        use_hma = param.get("Use_HMA_Filter", False)
+        ma_period = param.get("MA_Period", 0)
+
+        if st_period is not None and st_mult is not None:
+            ma_display = ma_period if (use_hma and ma_period > 0) else 0
+            return f"{s['ticker']} ({st_period}, {st_mult}, {ma_display})"
+        return s['ticker']
+
     lines = []
     lines.append(f"📊 <b>【SuperTrend 每日策略診斷報告】</b>")
     lines.append(f"📅 <b>日期:</b> {date_str} | 掃描標的: {len(signals)} 支\n")
@@ -242,12 +254,12 @@ def build_telegram_report(date_str: str, signals: List[Dict[str, Any]]) -> str:
     else:
         for s in new_buy:
             lines.append(
-                f"🟢 <b>[買入] {s['ticker']}</b> | 收盤: <code>${s['close']:.2f}</code> | "
+                f"🟢 <b>[買入] {fmt_ticker_params(s)}</b> | 收盤: <code>${s['close']:.2f}</code> | "
                 f"止損點: <code>${s['supertrend']:.2f}</code>"
             )
         for s in new_sell:
             lines.append(
-                f"🔴 <b>[平倉] {s['ticker']}</b> | 收盤: <code>${s['close']:.2f}</code> | "
+                f"🔴 <b>[平倉] {fmt_ticker_params(s)}</b> | 收盤: <code>${s['close']:.2f}</code> | "
                 f"觸發出場觀望"
             )
         lines.append("")
@@ -259,7 +271,7 @@ def build_telegram_report(date_str: str, signals: List[Dict[str, Any]]) -> str:
     else:
         for s in hold_long:
             lines.append(
-                f"• <b>{s['ticker']}</b> | 收盤: <code>${s['close']:.2f}</code> | "
+                f"• <b>{fmt_ticker_params(s)}</b> | 收盤: <code>${s['close']:.2f}</code> | "
                 f"出場參考價: <code>${s['exit_ref']:.2f}</code>"
             )
         lines.append("")
@@ -267,7 +279,7 @@ def build_telegram_report(date_str: str, signals: List[Dict[str, Any]]) -> str:
     # Section 3: 觀望標的
     lines.append(f"⚪ <b>【觀望中標的】({len(wait_cash)} 支)</b>")
     if wait_cash:
-        cash_tickers = [f"<b>{s['ticker']}</b>" for s in wait_cash]
+        cash_tickers = [f"<b>{fmt_ticker_params(s)}</b>" for s in wait_cash]
         lines.append(", ".join(cash_tickers))
 
     return "\n".join(lines)

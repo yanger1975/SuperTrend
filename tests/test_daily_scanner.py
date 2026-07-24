@@ -121,7 +121,8 @@ def test_build_telegram_report():
             "supertrend": 240.0,
             "signal_state": "NEW_BUY",
             "entry_ref": 240.0,
-            "exit_ref": None
+            "exit_ref": None,
+            "param": {"ST_Period": 10, "ST_Multiplier": 3.0, "MA_Period": 0, "Use_HMA_Filter": False}
         },
         {
             "ticker": "NVDA",
@@ -129,7 +130,8 @@ def test_build_telegram_report():
             "supertrend": 125.0,
             "signal_state": "NEW_SELL",
             "entry_ref": None,
-            "exit_ref": 125.0
+            "exit_ref": 125.0,
+            "param": {"ST_Period": 20, "ST_Multiplier": 4.0, "MA_Period": 50, "Use_HMA_Filter": True}
         },
         {
             "ticker": "SPY",
@@ -137,7 +139,8 @@ def test_build_telegram_report():
             "supertrend": 540.0,
             "signal_state": "HOLD_LONG",
             "entry_ref": None,
-            "exit_ref": 540.0
+            "exit_ref": 540.0,
+            "param": {"ST_Period": 15, "ST_Multiplier": 2.5, "MA_Period": 50, "Use_HMA_Filter": False}
         },
         {
             "ticker": "AAPL",
@@ -151,9 +154,9 @@ def test_build_telegram_report():
 
     report = build_telegram_report("2024-05-24", signals)
     assert "SuperTrend 每日策略診斷報告" in report
-    assert "TSLA" in report
-    assert "NVDA" in report
-    assert "SPY" in report
+    assert "TSLA (10, 3.0, 0)" in report
+    assert "NVDA (20, 4.0, 50)" in report
+    assert "SPY (15, 2.5, 0)" in report  # Use_HMA_Filter is False so ma_period displays 0
     assert "AAPL" in report
     assert "[買入]" in report
     assert "[平倉]" in report
