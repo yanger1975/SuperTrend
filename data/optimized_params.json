@@ -14,8 +14,8 @@
     "calmar_ratio": 0.8603375025363563,
     "win_rate": 0.5217391304347826,
     "profit_factor": 3.5548293691246164,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
   },
   {
     "ticker": "AAPL",
@@ -32,8 +32,26 @@
     "calmar_ratio": 1.0870800222176302,
     "win_rate": 0.5333333333333333,
     "profit_factor": 3.833110927754547,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
+  },
+  {
+    "ticker": "AAPL",
+    "start_date": "2020-01-02",
+    "end_date": "2026-08-01",
+    "st_period": 15,
+    "st_multiplier": 3.0,
+    "ma_period": 50,
+    "use_hma_filter": true,
+    "custom_score": 1.360111950512368,
+    "cagr": 0.23571532377757043,
+    "max_drawdown": -0.21769651423774503,
+    "sharpe_ratio": 1.0466782201513884,
+    "calmar_ratio": 1.082770317213932,
+    "win_rate": 0.5333333333333333,
+    "profit_factor": 3.8331064850172396,
+    "created_at": "2026-08-01 21:58:25",
+    "updated_at": "2026-08-01 21:58:25"
   },
   {
     "ticker": "AMD",
@@ -50,8 +68,8 @@
     "calmar_ratio": 0.8184440103060956,
     "win_rate": 0.5925925925925926,
     "profit_factor": 3.852911907470175,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
   },
   {
     "ticker": "AMD",
@@ -68,8 +86,26 @@
     "calmar_ratio": 0.6552333158868952,
     "win_rate": 0.6666666666666666,
     "profit_factor": 3.7080347130078395,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
+  },
+  {
+    "ticker": "AMD",
+    "start_date": "2020-01-02",
+    "end_date": "2026-08-01",
+    "st_period": 5,
+    "st_multiplier": 2.5,
+    "ma_period": 125,
+    "use_hma_filter": true,
+    "custom_score": 1.1021046497987665,
+    "cagr": 0.2630736887114735,
+    "max_drawdown": -0.40311147826392546,
+    "sharpe_ratio": 0.79419444782973,
+    "calmar_ratio": 0.6526077844383129,
+    "win_rate": 0.6666666666666666,
+    "profit_factor": 3.7080347130078395,
+    "created_at": "2026-08-01 22:03:56",
+    "updated_at": "2026-08-01 22:03:56"
   },
   {
     "ticker": "AMZN",
@@ -86,8 +122,8 @@
     "calmar_ratio": 0.5875550167744827,
     "win_rate": 0.5789473684210527,
     "profit_factor": 3.013499424424392,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
   },
   {
     "ticker": "AMZN",
@@ -104,8 +140,26 @@
     "calmar_ratio": 0.587173465040793,
     "win_rate": 0.5789473684210527,
     "profit_factor": 3.013499424424392,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
+  },
+  {
+    "ticker": "AMZN",
+    "start_date": "2020-01-02",
+    "end_date": "2026-08-01",
+    "st_period": 5,
+    "st_multiplier": 2.5,
+    "ma_period": 50,
+    "use_hma_filter": true,
+    "custom_score": 0.9420045245886451,
+    "cagr": 0.18240144790496293,
+    "max_drawdown": -0.3118535878995581,
+    "sharpe_ratio": 0.729862093298999,
+    "calmar_ratio": 0.5848944985161141,
+    "win_rate": 0.5789473684210527,
+    "profit_factor": 3.013499424424392,
+    "created_at": "2026-08-01 21:59:28",
+    "updated_at": "2026-08-01 21:59:28"
   },
   {
     "ticker": "GLD",
@@ -122,8 +176,8 @@
     "calmar_ratio": 0.5851133202195492,
     "win_rate": 0.5833333333333334,
     "profit_factor": 6.985850245133766,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
   },
   {
     "ticker": "GLD",
@@ -140,8 +194,26 @@
     "calmar_ratio": 0.3501544555769433,
     "win_rate": 0.4444444444444444,
     "profit_factor": 3.4664795684596337,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
+  },
+  {
+    "ticker": "GLD",
+    "start_date": "2020-01-02",
+    "end_date": "2026-08-01",
+    "st_period": 25,
+    "st_multiplier": 5.0,
+    "ma_period": 50,
+    "use_hma_filter": true,
+    "custom_score": 0.851333597505619,
+    "cagr": 0.06452583642244081,
+    "max_drawdown": -0.20052944934705288,
+    "sharpe_ratio": 0.45134299680837825,
+    "calmar_ratio": 0.3217773580516199,
+    "win_rate": 0.4444444444444444,
+    "profit_factor": 3.265125494895961,
+    "created_at": "2026-08-01 21:55:16",
+    "updated_at": "2026-08-01 21:55:16"
   },
   {
     "ticker": "GOOG",
@@ -158,8 +230,26 @@
     "calmar_ratio": 0.8343426458198046,
     "win_rate": 0.6666666666666666,
     "profit_factor": 9.56898743905219,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
+  },
+  {
+    "ticker": "GOOG",
+    "start_date": "2020-01-02",
+    "end_date": "2026-08-01",
+    "st_period": 5,
+    "st_multiplier": 5.0,
+    "ma_period": 50,
+    "use_hma_filter": true,
+    "custom_score": 2.37737462866179,
+    "cagr": 0.1990381686244258,
+    "max_drawdown": -0.2396497919905854,
+    "sharpe_ratio": 0.8682224185935279,
+    "calmar_ratio": 0.8305376231340313,
+    "win_rate": 0.6666666666666666,
+    "profit_factor": 9.568961673843322,
+    "created_at": "2026-08-01 22:06:02",
+    "updated_at": "2026-08-01 22:06:02"
   },
   {
     "ticker": "INTC",
@@ -176,8 +266,8 @@
     "calmar_ratio": 0.015446513707257182,
     "win_rate": 0.3157894736842105,
     "profit_factor": 1.436290978238051,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
   },
   {
     "ticker": "INTC",
@@ -194,8 +284,8 @@
     "calmar_ratio": -0.19347077111793615,
     "win_rate": 0.2692307692307692,
     "profit_factor": 0.622675086914426,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
   },
   {
     "ticker": "META",
@@ -212,8 +302,26 @@
     "calmar_ratio": 1.0006182131037114,
     "win_rate": 0.6,
     "profit_factor": 8.532596620134242,
-    "created_at": "2026-07-30 22:11:30",
-    "updated_at": "2026-07-30 22:11:30"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
+  },
+  {
+    "ticker": "META",
+    "start_date": "2020-01-02",
+    "end_date": "2026-08-01",
+    "st_period": 30,
+    "st_multiplier": 5.0,
+    "ma_period": 50,
+    "use_hma_filter": true,
+    "custom_score": 2.2657562597229988,
+    "cagr": 0.33947368835990366,
+    "max_drawdown": -0.33973074485068827,
+    "sharpe_ratio": 1.0782033889123273,
+    "calmar_ratio": 0.999243352288008,
+    "win_rate": 0.6,
+    "profit_factor": 8.5326019225091,
+    "created_at": "2026-08-01 22:02:52",
+    "updated_at": "2026-08-01 22:02:52"
   },
   {
     "ticker": "MSFT",
@@ -230,8 +338,8 @@
     "calmar_ratio": 0.3738073818511016,
     "win_rate": 0.5,
     "profit_factor": 4.282941194372923,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
   },
   {
     "ticker": "MSFT",
@@ -248,8 +356,26 @@
     "calmar_ratio": 0.5449620806055688,
     "win_rate": 0.5714285714285714,
     "profit_factor": 8.437671653747786,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
+  },
+  {
+    "ticker": "MSFT",
+    "start_date": "2020-01-02",
+    "end_date": "2026-08-01",
+    "st_period": 5,
+    "st_multiplier": 5.0,
+    "ma_period": 50,
+    "use_hma_filter": true,
+    "custom_score": 1.9784300010404468,
+    "cagr": 0.10563264802161121,
+    "max_drawdown": -0.19456568259691398,
+    "sharpe_ratio": 0.5545278892736042,
+    "calmar_ratio": 0.5429151051290617,
+    "win_rate": 0.5714285714285714,
+    "profit_factor": 8.437648000159012,
+    "created_at": "2026-08-01 22:00:47",
+    "updated_at": "2026-08-01 22:00:47"
   },
   {
     "ticker": "MU",
@@ -266,8 +392,8 @@
     "calmar_ratio": 0.6793043441362832,
     "win_rate": 0.6666666666666666,
     "profit_factor": 6.341781700527911,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
   },
   {
     "ticker": "MU",
@@ -284,8 +410,26 @@
     "calmar_ratio": 0.657668105265948,
     "win_rate": 0.75,
     "profit_factor": 10.551746419033538,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
+  },
+  {
+    "ticker": "MU",
+    "start_date": "2020-01-02",
+    "end_date": "2026-08-01",
+    "st_period": 10,
+    "st_multiplier": 5.0,
+    "ma_period": 0,
+    "use_hma_filter": false,
+    "custom_score": 2.492861192121726,
+    "cagr": 0.25687445856398994,
+    "max_drawdown": -0.39215081083925407,
+    "sharpe_ratio": 0.8490816010752393,
+    "calmar_ratio": 0.6550399781508675,
+    "win_rate": 0.75,
+    "profit_factor": 10.55176399687763,
+    "created_at": "2026-08-01 21:57:22",
+    "updated_at": "2026-08-01 21:57:22"
   },
   {
     "ticker": "NVDA",
@@ -302,8 +446,8 @@
     "calmar_ratio": 1.3316894174452898,
     "win_rate": 0.5,
     "profit_factor": 15.676181684226778,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
   },
   {
     "ticker": "NVDA",
@@ -320,8 +464,26 @@
     "calmar_ratio": 1.9691001031393722,
     "win_rate": 0.6,
     "profit_factor": 24.05882055088935,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
+  },
+  {
+    "ticker": "NVDA",
+    "start_date": "2020-01-02",
+    "end_date": "2026-08-01",
+    "st_period": 15,
+    "st_multiplier": 5.0,
+    "ma_period": 50,
+    "use_hma_filter": true,
+    "custom_score": 5.767288600135388,
+    "cagr": 0.6917597240543985,
+    "max_drawdown": -0.3529290871803819,
+    "sharpe_ratio": 1.531726563534214,
+    "calmar_ratio": 1.9600530224952537,
+    "win_rate": 0.6,
+    "profit_factor": 24.05878432355338,
+    "created_at": "2026-08-01 22:01:49",
+    "updated_at": "2026-08-01 22:01:49"
   },
   {
     "ticker": "QLD",
@@ -338,8 +500,8 @@
     "calmar_ratio": 0.4533029341332379,
     "win_rate": 0.75,
     "profit_factor": 6.91944311629555,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
   },
   {
     "ticker": "QQQM",
@@ -356,8 +518,8 @@
     "calmar_ratio": 0.7145125434566011,
     "win_rate": 0.9,
     "profit_factor": 9.29176703011749,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
   },
   {
     "ticker": "QQQM",
@@ -374,8 +536,26 @@
     "calmar_ratio": 0.6343972101937948,
     "win_rate": 0.875,
     "profit_factor": 5.957883886457998,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
+  },
+  {
+    "ticker": "QQQM",
+    "start_date": "2020-10-13",
+    "end_date": "2026-08-01",
+    "st_period": 20,
+    "st_multiplier": 5.0,
+    "ma_period": 25,
+    "use_hma_filter": true,
+    "custom_score": 1.5740355882872625,
+    "cagr": 0.10217463029372231,
+    "max_drawdown": -0.15816896743516146,
+    "sharpe_ratio": 0.6639469976786677,
+    "calmar_ratio": 0.6459840507943315,
+    "win_rate": 0.875,
+    "profit_factor": 6.058959599440891,
+    "created_at": "2026-08-01 21:53:09",
+    "updated_at": "2026-08-01 21:53:09"
   },
   {
     "ticker": "SMCI",
@@ -392,8 +572,8 @@
     "calmar_ratio": 0.3289617586292759,
     "win_rate": 0.6153846153846154,
     "profit_factor": 5.439473947911592,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
   },
   {
     "ticker": "SMH",
@@ -410,8 +590,8 @@
     "calmar_ratio": 0.9122575973774664,
     "win_rate": 0.6923076923076923,
     "profit_factor": 9.160723604144973,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
   },
   {
     "ticker": "SMH",
@@ -428,8 +608,26 @@
     "calmar_ratio": 0.840694092067432,
     "win_rate": 0.7777777777777778,
     "profit_factor": 13.225758959884859,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
+  },
+  {
+    "ticker": "SMH",
+    "start_date": "2020-01-02",
+    "end_date": "2026-08-01",
+    "st_period": 5,
+    "st_multiplier": 4.5,
+    "ma_period": 50,
+    "use_hma_filter": true,
+    "custom_score": 3.082882823165848,
+    "cagr": 0.18666707720720477,
+    "max_drawdown": -0.22290582571515902,
+    "sharpe_ratio": 0.7798769893343624,
+    "calmar_ratio": 0.8374257451922228,
+    "win_rate": 0.7777777777777778,
+    "profit_factor": 13.225753028718986,
+    "created_at": "2026-08-01 21:54:11",
+    "updated_at": "2026-08-01 21:54:11"
   },
   {
     "ticker": "SNDK",
@@ -446,8 +644,8 @@
     "calmar_ratio": 13.90208187611033,
     "win_rate": 0.75,
     "profit_factor": 308.16939857676005,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
   },
   {
     "ticker": "SNDK",
@@ -464,8 +662,26 @@
     "calmar_ratio": 22.233166672028077,
     "win_rate": 0.6666666666666666,
     "profit_factor": 271.4487383500745,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
+  },
+  {
+    "ticker": "SNDK",
+    "start_date": "2025-02-13",
+    "end_date": "2026-08-01",
+    "st_period": 5,
+    "st_multiplier": 3.5,
+    "ma_period": 50,
+    "use_hma_filter": true,
+    "custom_score": 61.9500429801648,
+    "cagr": 6.25380268502247,
+    "max_drawdown": -0.3430216208446412,
+    "sharpe_ratio": 2.989503258227739,
+    "calmar_ratio": 18.231511674463505,
+    "win_rate": 0.6666666666666666,
+    "profit_factor": 282.0722162266907,
+    "created_at": "2026-08-01 21:59:43",
+    "updated_at": "2026-08-01 21:59:43"
   },
   {
     "ticker": "SPCX",
@@ -482,8 +698,8 @@
     "calmar_ratio": 0.0,
     "win_rate": 0.0,
     "profit_factor": 1.0,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
   },
   {
     "ticker": "SPMO",
@@ -500,8 +716,8 @@
     "calmar_ratio": 0.15680693543951493,
     "win_rate": 0.42105263157894735,
     "profit_factor": 1.8872145530710809,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
   },
   {
     "ticker": "SPY",
@@ -518,8 +734,8 @@
     "calmar_ratio": 0.513016605901243,
     "win_rate": 0.7272727272727273,
     "profit_factor": 7.482544288777761,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
   },
   {
     "ticker": "SPY",
@@ -536,8 +752,26 @@
     "calmar_ratio": 0.5371455484858327,
     "win_rate": 0.625,
     "profit_factor": 5.538078385986933,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
+  },
+  {
+    "ticker": "SPY",
+    "start_date": "2020-01-02",
+    "end_date": "2026-08-01",
+    "st_period": 10,
+    "st_multiplier": 5.0,
+    "ma_period": 0,
+    "use_hma_filter": false,
+    "custom_score": 1.4640393229687532,
+    "cagr": 0.097580868236542,
+    "max_drawdown": -0.18234870638331124,
+    "sharpe_ratio": 0.7403294296716209,
+    "calmar_ratio": 0.5351333177621748,
+    "win_rate": 0.625,
+    "profit_factor": 5.538052172099023,
+    "created_at": "2026-08-01 21:52:13",
+    "updated_at": "2026-08-01 21:52:13"
   },
   {
     "ticker": "SPY",
@@ -554,8 +788,8 @@
     "calmar_ratio": 1.705463662100488,
     "win_rate": 0.3333333333333333,
     "profit_factor": 3.135059949489102,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
   },
   {
     "ticker": "TSLA",
@@ -572,8 +806,8 @@
     "calmar_ratio": 1.1301253028465517,
     "win_rate": 0.5,
     "profit_factor": 4.798253082815093,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
   },
   {
     "ticker": "TSLA",
@@ -590,8 +824,26 @@
     "calmar_ratio": 2.020626124191059,
     "win_rate": 0.6470588235294118,
     "profit_factor": 7.473417080188824,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
+  },
+  {
+    "ticker": "TSLA",
+    "start_date": "2020-01-02",
+    "end_date": "2026-08-01",
+    "st_period": 5,
+    "st_multiplier": 2.5,
+    "ma_period": 0,
+    "use_hma_filter": false,
+    "custom_score": 2.4121244735912053,
+    "cagr": 0.6785446161192679,
+    "max_drawdown": -0.33735353965339043,
+    "sharpe_ratio": 1.3773368900396201,
+    "calmar_ratio": 2.0113754158810067,
+    "win_rate": 0.6470588235294118,
+    "profit_factor": 7.473417080188824,
+    "created_at": "2026-08-01 22:05:01",
+    "updated_at": "2026-08-01 22:05:01"
   },
   {
     "ticker": "VNQ",
@@ -608,8 +860,8 @@
     "calmar_ratio": 0.22994224039664188,
     "win_rate": 0.5454545454545454,
     "profit_factor": 3.2470624229198797,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
   },
   {
     "ticker": "VNQ",
@@ -626,7 +878,25 @@
     "calmar_ratio": 0.3515506278829278,
     "win_rate": 0.5,
     "profit_factor": 3.793177533560285,
-    "created_at": "2026-07-30 22:09:57",
-    "updated_at": "2026-07-30 22:09:57"
+    "created_at": "2026-08-01 21:51:10",
+    "updated_at": "2026-08-01 21:51:10"
+  },
+  {
+    "ticker": "VNQ",
+    "start_date": "2020-01-02",
+    "end_date": "2026-08-01",
+    "st_period": 30,
+    "st_multiplier": 4.5,
+    "ma_period": 50,
+    "use_hma_filter": true,
+    "custom_score": 0.9249459796187284,
+    "cagr": 0.07984326048093071,
+    "max_drawdown": -0.23931866492717666,
+    "sharpe_ratio": 0.4366200571922362,
+    "calmar_ratio": 0.3336273854996917,
+    "win_rate": 0.5,
+    "profit_factor": 3.6829292310597905,
+    "created_at": "2026-08-01 21:56:20",
+    "updated_at": "2026-08-01 21:56:20"
   }
 ]
