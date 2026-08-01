@@ -83,8 +83,9 @@ class DataLoader:
                 if local_start <= (start_dt + day_slack) and local_end >= (end_dt - day_slack):
                     return local_df
 
-        # 下載資料
-        data = yf.download(ticker, start=start_date, end=end_date, interval=interval, auto_adjust=True)
+        # 下載資料 (注意: yfinance 的 end 參數為 exclusive，需 +1 天以涵蓋 end_date 當日)
+        yf_end_date = (end_dt + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+        data = yf.download(ticker, start=start_date, end=yf_end_date, interval=interval, auto_adjust=True)
         if data.empty:
             raise ValueError(f"Downloaded yfinance data is empty for ticker '{ticker}' in interval '{interval}'.")
 

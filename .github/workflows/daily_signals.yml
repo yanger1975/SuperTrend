@@ -2,13 +2,13 @@ name: Daily SuperTrend Signal Scanner & Telegram Notifier
 
 on:
   schedule:
-    # 1. 週一至週五美股收盤後 (UTC 21:00，對應台北時間隔日早上 05:00)
+    # 1. 週一至週五美股收盤後 2 小時 (UTC 23:00，對應台北時間隔日早上 07:00)
     #    進行每日歷史數據更新與訊號掃描
-    - cron: '0 21 * * 1-5'
+    - cron: '0 23 * * 1-5'
 
-    # 2. 固定週六 (UTC 21:00，對應台北時間週日早上 05:00)
+    # 2. 固定週六 (UTC 23:00 週六，對應台北時間週日早上 07:00)
     #    觸發全標的重新進行網格參數優化
-    - cron: '0 21 * * 6'
+    - cron: '0 23 * * 6'
   workflow_dispatch: # 支援在 GitHub 網頁上手動點擊執行測試
 
 jobs:

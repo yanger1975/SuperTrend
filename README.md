@@ -79,11 +79,13 @@ python run_batch_optimization.py --start 2020-01-01 --workers 4
 #### 引數清單 (Full Arguments)
 | 引數名稱 | 類型 | 預設值 | 說明 |
 | :--- | :--- | :--- | :--- |
-| `--date` | `str` | `Today (yyyyMMdd)` | 輸出報告目錄的日期標籤 (例如 `20260722`)。 |
+| `--date` | `str` | `Today (yyyyMMdd)` | 輸出報告目錄的日期標籤 (例如 `20260801`)。 |
 | `--start` | `str` | `"2020-01-01"` | 歷史資料起始日期 `YYYY-MM-DD`。 |
-| `--end` | `str` | `Today` | 歷史資料結束日期 `YYYY-MM-DD`。 |
+| `--end` | `str` | `Today (YYYY-MM-DD)` | 歷史資料結束日期 `YYYY-MM-DD`。 |
 | `--interval` | `str` | `"1d"` | K 線週期，可選擇 `"1d"`, `"1h"`, `"60m"`。 |
 | `--workers` | `int` | `4` | 並行處理的 Worker 執行緒數量。 |
+
+*註：GitHub Actions 自動工作流程設於美股收盤後 2 小時 (UTC 23:00，台北時間隔日 07:00) 觸發，確保 Yahoo 財經數據已完全備妥；`DataLoader` 並自動將 yfinance 下載 end 參數 +1 天以完整涵蓋 end 區間當日 K 線。*
 
 ---
 
@@ -135,8 +137,35 @@ python run_daily_scanner.py --force-reoptimize
 | `--dry-run` | `flag` | `False` | 僅在 Console 印出診斷報告內容，不實際呼叫 Telegram API。 |
 | `--db-path` | `str` | `"data/market_data.db"` | SQLite 資料庫檔案路徑。 |
 
-### D. GitHub Actions 自動化雲端部署 (`.github/workflows/daily_signals.yml`)
+### D. ETF 定期定額 + 低檔加碼策略回測 (`run_dca_backtest.py`)
+針對左側交易（定期定額扣款與低檔加碼）進行單次回測並產出互動式 HTML 綜合報告：
+
+```bash
+python run_dca_backtest.py --symbol 0050.TW --amount 10000 --budget 500000 --output dca_report.html
+```
+
+#### 引數清單 (Full Arguments)
+| 引數名稱 | 類型 | 預設值 | 說明 |
+| :--- | :--- | :--- | :--- |
+| `--symbol` | `str` | `"0050.TW"` | 交易標的代碼 (例如 0050.TW, 006208.TW, SPY)。 |
+| `--amount` | `float` | `10000.0` | 每期定期定額基礎扣款金額。 |
+| `--budget` | `float` | `500000.0` | 額外加碼總預算上限。 |
+| `--output` | `str` | `"dca_backtest_report.html"` | 輸出的單頁互動式 HTML 報告路徑。 |
+
+---
+
+### E. ETF 低檔加碼網格最佳化 (`run_dca_optimizer.py`)
+針對加碼門檻、比較天數、冷卻期與每月次數限制進行參數網格搜尋：
+
+```bash
+python run_dca_optimizer.py --symbol 0050.TW
+```
+
+---
+
+### F. GitHub Actions 自動化雲端部署 (`.github/workflows/daily_signals.yml`)
 本專案已內建完整的 GitHub Actions 自動化工作流。每逢平日美股收盤自動計算訊號並推播至 Telegram；每逢週六自動觸發全標的參數網格重新優化，並將更新後的最適參數檔案與最新熱門股票清單 (`data/optimized_params.json` 與 `data/most-active.json`) 自動 Push 存回 Git 倉庫。
+
 
 ---
 

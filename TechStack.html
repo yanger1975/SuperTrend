@@ -318,7 +318,15 @@
                         <li>**標的與優化判斷**：每日掃描熱門美股與必備標的，新標的自動網格優化，舊標的搜尋與目前日期最近 end_date 之最適參數，每週六自動執行全標的重新優化。</li>
                         <li>**訊號變動追蹤**：比較前日與當日持倉狀態，精準辨識 `NEW_BUY` (新進場)、`NEW_SELL` (新平倉/止損)、`HOLD_LONG` (持倉中) 與 `WAIT_CASH` (觀望標的) 並發送報告。</li>
                     </ul>
+
+                    <h3>10. ETF 定期定額 + 低檔加碼系統 (src/dca_addon/)</h3>
+                    <ul>
+                        <li>**左側交易與獨立架構 (`src/dca_addon/`)**：與 SuperTrend 順勢交易解耦，包含策略設定 (`config.py`)、回測引擎 (`engine.py`)、左側績效指標 (`metrics.py`)、多線程網格搜尋 (`optimizer.py`) 與 Plotly/HTML 報告生成器 (`visualizer.py`)。</li>
+                        <li>**互動研究環境 (`notebooks/DCA_AddOn_Strategy_Research.ipynb`)**：提供單頁 Plotly 三連動互動圖表（點位散點圖、投入資金 vs 市值、平均持倉成本與水下圖）及熱力圖分析。</li>
+                        <li>**CLI 工具 (`run_dca_backtest.py` & `run_dca_optimizer.py`)**：支援單次回測與批次參數最佳化產出。</li>
+                    </ul>
                 </div>
+
 
                 <div class="card">
                     <h2>關鍵設計決策與技術折衷</h2>
@@ -341,6 +349,11 @@
                     <div class="decision-block">
                         <h4>D. SQLite 本地快取與 JSON 跨環境雙向同步 (Stateless CI/CD)</h4>
                         <p>SQLite 資料庫 (`market_data.db`) 作為本地高效運算快取，加入 `.gitignore` 避免二進位 Commit 衝突與 Git 體積暴增；同時將最適參數自動雙向同步為輕量化 `data/optimized_params.json` 存入 Git 追蹤，使 GitHub Actions 等無狀態雲端環境能秒級恢復參數並進行即時掃描。</p>
+                    </div>
+
+                    <div class="decision-block">
+                        <h4>E. GitHub Actions 收盤 2 小時延遲排程與 yfinance 包容性 end 邊界</h4>
+                        <p>考量美股收盤後 Yahoo 財經當地數據處理時間，GitHub Actions 自動排程設於 UTC 23:00 (台北時間隔日上午 07:00) 觸發，確保資料庫已完整準備好；Python 腳本維持直觀的 `datetime.now()` 預設值；`DataLoader` 並自動將 `yf.download` 之 `end` 參數設為 `end_date + 1 day`，解決 yfinance 非包容性 (exclusive) 導致遺失當日 K 線之問題。</p>
                     </div>
                 </div>
             </div>

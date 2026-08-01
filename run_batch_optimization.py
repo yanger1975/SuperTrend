@@ -16,7 +16,7 @@ import argparse
 import json
 import sys
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Dict, Any
 import pandas as pd
 import numpy as np
@@ -510,10 +510,11 @@ Examples:
     args = parser.parse_args()
 
     # 設定預設值
+    now = datetime.now()
     if args.date is None:
-        args.date = datetime.now().strftime("%Y%m%d")
+        args.date = now.strftime("%Y%m%d")
     if args.end is None:
-        args.end = datetime.now().strftime("%Y-%m-%d")
+        args.end = now.strftime("%Y-%m-%d")
 
     print(f"Batch Optimization Runner")
     print(f"  輸出目錄: data/{args.date}/")
