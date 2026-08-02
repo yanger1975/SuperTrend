@@ -24,6 +24,10 @@ def create_monthly_return_pivot(equity: pd.Series, benchmark: pd.Series) -> str:
     # 計算月報酬率 (%)
     monthly_ret = monthly.pct_change().dropna() * 100
     
+    if monthly_ret.empty:
+        return "## 逐月報酬率 (策略% vs B&H%)\n\n| Year | Jan | Feb | Mar | Apr | May | Jun | Jul | Aug | Sep | Oct | Nov | Dec | YTD |\n|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n| **No data** | - | - | - | - | - | - | - | - | - | - | - | - | - |\n"
+
+    
     monthly_ret['Year'] = monthly_ret.index.year
     monthly_ret['Month'] = monthly_ret.index.month
     
@@ -37,7 +41,6 @@ def create_monthly_return_pivot(equity: pd.Series, benchmark: pd.Series) -> str:
             
     strat_pivot = strat_pivot.reindex(columns=range(1, 13))
     bench_pivot = bench_pivot.reindex(columns=range(1, 13))
-    
     md = "## 逐月報酬率 (策略% vs B&H%)\n\n"
     md += "| Year | Jan | Feb | Mar | Apr | May | Jun | Jul | Aug | Sep | Oct | Nov | Dec | YTD |\n"
     md += "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|\n"
@@ -49,8 +52,8 @@ def create_monthly_return_pivot(equity: pd.Series, benchmark: pd.Series) -> str:
         
         has_data = False
         for m in range(1, 13):
-            s_val = strat_pivot.loc[year, m]
-            b_val = bench_pivot.loc[year, m]
+            s_val = strat_pivot.at[year, m] if year in strat_pivot.index and m in strat_pivot.columns else np.nan
+            b_val = bench_pivot.at[year, m] if year in bench_pivot.index and m in bench_pivot.columns else np.nan
             
             if pd.isna(s_val):
                 row += "| - "
@@ -66,7 +69,6 @@ def create_monthly_return_pivot(equity: pd.Series, benchmark: pd.Series) -> str:
             row += f"| **{s_ytd:.1f}% ({b_ytd:.1f}%)** |\n"
         else:
             row += f"| - |\n"
-            
         md += row
         
     return md
@@ -84,8 +86,10 @@ def generate_supertrend_ai_report(
     report_dir: str
 ) -> str:
     
+    import re
+    safe_ticker = re.sub(r'[^A-Za-z0-9._-]', '_', ticker)
     os.makedirs(report_dir, exist_ok=True)
-    report_path = os.path.join(report_dir, f"{ticker}_AI.md")
+    report_path = os.path.join(report_dir, f"{safe_ticker}_AI.md")
     
     md = f"# {ticker} SuperTrend AI 優化回測報告\n\n"
     md += f"**執行日期**: {pd.Timestamp.now().strftime('%Y%m%d')}\n"
@@ -137,14 +141,27 @@ def generate_supertrend_ai_report(
     md += "## 完整交易紀錄\n\n"
     md += "| 序號 | 方向 | 進場日期 | 進場價 | 出場日期 | 出場價 | 損益(%) | 離場原因 |\n"
     md += "|---|---|---|---|---|---|---|---|\n"
-    
     for i, t in enumerate(trades, 1):
-        ext_date = t.exit_date.strftime('%Y-%m-%d') if pd.notna(t.exit_date) else '-'
-        ext_price = f"{t.exit_price:.2f}" if pd.notna(t.exit_price) else '-'
-        md += f"| {i} | {t.direction} | {t.entry_date.strftime('%Y-%m-%d')} | {t.entry_price:.2f} "
-        md += f"| {ext_date} | {ext_price} | {_format_pct(t.pnl_pct)} | {t.exit_reason} |\n"
-        
-    with open(report_path, 'w', encoding='utf-8') as f:
-        f.write(md)
+        try:
+            entry_date = t.entry_date.strftime('%Y-%m-%d') if pd.notna(t.entry_date) else '-'
+            exit_date = t.exit_date.strftime('%Y-%m-%d') if pd.notna(t.exit_date) else '-'
+            entry_price = f"{t.entry_price:.2f}" if pd.notna(t.entry_price) else '-'
+            exit_price = f"{t.exit_price:.2f}" if pd.notna(t.exit_price) else '-'
+            pnl_pct = _format_pct(t.pnl_pct)
+            direction = getattr(t, 'direction', '-')
+            exit_reason = getattr(t, 'exit_reason', '-')
+        except AttributeError as e:
+            md += f"| {i} | ERROR | MISSING ATTRIBUTE: {e} | - | - | - | - |\n"
+            continue
+        md += f"| {i} | {direction} | {entry_date} | {entry_price} | {exit_date} | {exit_price} | {pnl_pct} | {exit_reason} |\n"
+
+    
+    try:
+        with open(report_path, 'w', encoding='utf-8') as f:
+            f.write(md)
+    except OSError as e:
+        import logging
+        logging.getLogger(__name__).error(f"Failed to write report to {report_path}: {e}")
+
         
     return md

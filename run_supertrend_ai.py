@@ -39,14 +39,14 @@ def main():
         ticker=args.ticker,
         start_date=args.start,
         end_date=args.end,
-        lengths=[10, 15],
-        min_mults=[1.0, 2.0],
-        max_mults=[3.0, 4.0],
+        lengths=[10, 14, 20],
+        min_mults=[1.0, 1.5, 2.0],
+        max_mults=[3.0, 4.0, 5.0],
         steps=[0.5],
-        perf_alphas=[10.0],
+        perf_alphas=[5, 10.0, 20],
         clusters=['Best', 'Average'],
-        update_freqs=[1, 5],
-        long_onlys=[True, False]
+        update_freqs=[1],
+        long_onlys=[True]
     )
     
     print("\n最佳參數組合:")

@@ -2,10 +2,6 @@ import pandas as pd
 import numpy as np
 from src.supertrend_ai.kmeans import kmeans_1d_labels
 from tqdm.auto import tqdm
-import warnings
-
-warnings.filterwarnings('ignore', category=UserWarning)
-
 def calculate_atr(high, low, close, length):
     tr1 = high - low
     tr2 = (high - close.shift(1)).abs()
@@ -84,11 +80,27 @@ def supertrend_ai(df, length=10, min_mult=1.0, max_mult=5.0, step=0.5, perf_alph
     SuperTrend AI (Clustering) logic.
     Returns the dataframe with SuperTrend_AI, SuperTrend_AI_Direction, Target_Factor.
     """
+    if not {'High', 'Low', 'Close'}.issubset(df.columns):
+        raise ValueError("DataFrame must contain 'High', 'Low', 'Close' columns")
+    if length <= 0:
+        raise ValueError("length must be > 0")
+    if min_mult > max_mult:
+        raise ValueError("min_mult must be <= max_mult")
+    if step <= 0:
+        raise ValueError("step must be > 0")
+    if perf_alpha <= 0:
+        raise ValueError("perf_alpha must be > 0")
+    if update_freq <= 0:
+        raise ValueError("update_freq must be > 0")
+    if from_cluster not in {'Best', 'Average', 'Worst'}:
+        raise ValueError("from_cluster must be one of 'Best', 'Average', 'Worst'")
+        
     high = df['High']
     low = df['Low']
     close = df['Close']
     
-    factors = np.arange(min_mult, max_mult + step/2, step)
+    n_factors = int(round((max_mult - min_mult) / step)) + 1
+    factors = np.linspace(min_mult, max_mult, n_factors)
     atr = calculate_atr(high, low, close, length)
     
     # 1. Compute basic supertrends and their outputs
@@ -111,10 +123,12 @@ def supertrend_ai(df, length=10, min_mult=1.0, max_mult=5.0, step=0.5, perf_alph
     
     # 3. K-Means Clustering
     n = len(df)
-    cluster_idx_map = {'Worst': 0, 'Average': 1, 'Best': 2}
-    from_idx = cluster_idx_map.get(from_cluster, 2)
+    n = len(df)
     
     perf_vals = perf_df.values
+    
+    
+    target_factors[0] = float(np.mean(factors))
     
     iterator = range(n)
     if show_progress:
@@ -129,14 +143,20 @@ def supertrend_ai(df, length=10, min_mult=1.0, max_mult=5.0, step=0.5, perf_alph
             continue
             
         if len(factors) == 0:
-            target_factors[i] = target_factors[i-1]
+            row_perf = perf_vals[i]
+        mask_valid = ~np.isnan(row_perf)
+        if not mask_valid.any():
+            if i > 0 and not np.isnan(target_factors[i-1]):
+                target_factors[i] = target_factors[i-1]
             continue
             
-        if update_freq > 1 and i % update_freq != 0 and i > 0 and not np.isnan(target_factors[i-1]):
-            target_factors[i] = target_factors[i-1]
+        if update_freq > 1 and i % update_freq != 0 and i > 0:
+            last_valid = target_factors[:i][~np.isnan(target_factors[:i])]
+            if len(last_valid) > 0:
+                target_factors[i] = last_valid[-1]
             continue
             
-        data = row_perf
+        data = row_perf[mask_valid]
         n_clusters = min(3, len(factors))
         
         centers, labels = kmeans_1d_labels(data, k=n_clusters)
@@ -151,16 +171,16 @@ def supertrend_ai(df, length=10, min_mult=1.0, max_mult=5.0, step=0.5, perf_alph
             else:
                 from_idx = 1
         elif n_clusters == 2:
-            if from_cluster == 'Best' or from_cluster == 'Average':
+            if from_cluster == 'Best':
                 from_idx = -1
-            else:
+            elif from_cluster == 'Average' or from_cluster == 'Worst':
                 from_idx = 0
         else:
             from_idx = 0
             
         target_original_label = sorted_indices[from_idx]
         mask = (labels == target_original_label)
-        target_f = np.mean(factors[mask]) if np.any(mask) else np.mean(factors)
+        target_f = np.mean(factors[mask_valid][mask]) if np.any(mask) else np.mean(factors)
         
         target_factors[i] = target_f
         
@@ -216,7 +236,7 @@ def supertrend_ai(df, length=10, min_mult=1.0, max_mult=5.0, step=0.5, perf_alph
             ts[i] = upper[i]
             
     df_out = df.copy()
-    df_out['SuperTrend_AI'] = ts
-    df_out['SuperTrend_AI_Direction'] = trend
-    df_out['Target_Factor'] = target_factors
+    df_out['SuperTrend_AI'] = pd.Series(ts, index=df.index)
+    df_out['SuperTrend_AI_Direction'] = pd.Series(trend, index=df.index, dtype=int)
+    df_out['Target_Factor'] = pd.Series(target_factors, index=df.index)
     return df_out

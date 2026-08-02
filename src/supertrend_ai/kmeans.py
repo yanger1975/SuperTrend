@@ -8,6 +8,8 @@ def kmeans_1d_labels(data: np.ndarray, k: int, max_iter: int = 100):
     Returns: (centroids, labels)
     """
     n = len(data)
+    if n == 0:
+        return np.zeros(k), np.zeros(0, dtype=np.int32)
     
     # Initialize centroids based on percentiles
     centroids = np.zeros(k)
@@ -18,8 +20,11 @@ def kmeans_1d_labels(data: np.ndarray, k: int, max_iter: int = 100):
     elif k == 2:
         centroids[0] = np.percentile(data, 33)
         centroids[1] = np.percentile(data, 66)
-    else:
+    elif k == 1:
         centroids[0] = np.percentile(data, 50)
+    else:
+        for j in range(k):
+            centroids[j] = np.percentile(data, (j + 1) * 100 / (k + 1))
         
     labels = np.zeros(n, dtype=np.int32)
     
@@ -49,10 +54,10 @@ def kmeans_1d_labels(data: np.ndarray, k: int, max_iter: int = 100):
             else:
                 new_centroids[j] = centroids[j]
                 
-        # Check convergence
+        # Check convergence with tolerance
         same = True
         for j in range(k):
-            if centroids[j] != new_centroids[j]:
+            if abs(centroids[j] - new_centroids[j]) > 1e-8:
                 same = False
                 break
                 

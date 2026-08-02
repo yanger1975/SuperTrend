@@ -11,13 +11,19 @@ def get_connection() -> sqlite3.Connection:
     try:
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA busy_timeout=10000")
-    except sqlite3.Error:
-        pass
+    except sqlite3.Error as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Failed to set SQLite PRAGMAs: {e}")
     return conn
 
+_initialized = False
+
 def init_supertrend_ai_db():
-    conn = get_connection()
-    try:
+    global _initialized
+    if _initialized:
+        return
+        
+    with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS strategy_params_supertrend_ai (
@@ -52,10 +58,8 @@ def init_supertrend_ai_db():
         if "long_only" not in columns:
             cursor.execute("ALTER TABLE strategy_params_supertrend_ai ADD COLUMN long_only INTEGER DEFAULT 1")
 
-            
         conn.commit()
-    finally:
-        conn.close()
+    _initialized = True
 
 def save_supertrend_ai_params(
     ticker: str,
@@ -78,8 +82,7 @@ def save_supertrend_ai_params(
     profit_factor: float = None
 ):
     init_supertrend_ai_db()
-    conn = get_connection()
-    try:
+    with get_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO strategy_params_supertrend_ai (
@@ -117,14 +120,9 @@ def save_supertrend_ai_params(
             float(profit_factor) if profit_factor is not None else None
         ))
         conn.commit()
-    finally:
-        conn.close()
 
 def query_supertrend_ai_params(ticker: str) -> pd.DataFrame:
     init_supertrend_ai_db()
-    conn = get_connection()
-    try:
+    with get_connection() as conn:
         query = "SELECT * FROM strategy_params_supertrend_ai WHERE ticker=? ORDER BY updated_at DESC"
         return pd.read_sql_query(query, conn, params=(ticker,))
-    finally:
-        conn.close()

@@ -21,9 +21,29 @@ def run_supertrend_ai_backtest(df: pd.DataFrame,
     """
     執行 SuperTrend AI 策略回測，返回交易紀錄、資金曲線、基準曲線、加上指標的 DataFrame 與績效指標。
     """
+    if length <= 0:
+        raise ValueError("length must be > 0")
+    if min_mult >= max_mult:
+        raise ValueError("min_mult must be < max_mult")
+    if step <= 0:
+        raise ValueError("step must be > 0")
+    if perf_alpha <= 0:
+        raise ValueError("perf_alpha must be > 0")
+    if update_freq <= 0:
+        raise ValueError("update_freq must be > 0")
+    for pct in [stop_loss_pct, take_profit_pct, commission_bps, slippage_bps]:
+        if pct < 0:
+            raise ValueError("Percentage/bps parameters must be >= 0")
+
+    if df.empty:
+        raise ValueError("Input DataFrame is empty")
+
     # 1. 產生 SuperTrend AI 指標
     df_ind = supertrend_ai(df.copy(), length, min_mult, max_mult, step, perf_alpha, from_cluster, update_freq=update_freq, show_progress=show_progress)
     
+    if df_ind.empty:
+        raise ValueError("Indicator computation returned empty DataFrame")
+
     # 2. 轉換欄位供回測引擎使用 (Trend=1 為多頭, -1 為空頭)
     df_ind['Trend'] = df_ind['SuperTrend_AI_Direction'].replace({0: -1})
     
@@ -57,6 +77,6 @@ def calculate_custom_score(metrics: Dict[str, Any]) -> float:
         return 0.0
     sharpe = metrics.get("Sharpe Ratio", 0.0)
     calmar = metrics.get("Calmar Ratio", 0.0)
-    pf = metrics.get("Profit Factor", 1.0)
+    pf = metrics.get("Profit Factor", 0.0)
     max_dd = abs(metrics.get("Max Drawdown", 0.0))
     return 0.35 * sharpe + 0.25 * calmar + 0.20 * pf - 0.20 * max_dd

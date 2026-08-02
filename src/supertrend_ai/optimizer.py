@@ -2,31 +2,42 @@ import pandas as pd
 from typing import List, Tuple, Dict, Any
 from src.supertrend_ai.backtest import run_supertrend_ai_backtest, calculate_custom_score
 from src.supertrend_ai.db_setup import save_supertrend_ai_params
+from tqdm.auto import tqdm
+
 
 def optimize_supertrend_ai(
     df: pd.DataFrame,
     ticker: str,
     start_date: str,
     end_date: str,
-    lengths: List[int] = [10],
-    min_mults: List[float] = [1.0],
-    max_mults: List[float] = [5.0],
-    steps: List[float] = [0.5],
-    perf_alphas: List[float] = [10.0],
-    clusters: List[str] = ['Best'],
-    update_freqs: List[int] = [1],
-    long_onlys: List[bool] = [True],
+    lengths: List[int] = None,
+    min_mults: List[float] = None,
+    max_mults: List[float] = None,
+    steps: List[float] = None,
+    perf_alphas: List[float] = None,
+    clusters: List[str] = None,
+    update_freqs: List[int] = None,
+    long_onlys: List[bool] = None,
     target_metric: str = "Custom Score"
 ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
     """
     執行 SuperTrend AI 的參數網格掃描，並將最佳結果寫入資料庫。
     參數清單放置於函式簽章，供使用者在 notebook 或腳本頂部彈性呼叫。
     """
+    lengths = lengths if lengths is not None else [10]
+    min_mults = min_mults if min_mults is not None else [1.0]
+    max_mults = max_mults if max_mults is not None else [5.0]
+    steps = steps if steps is not None else [0.5]
+    perf_alphas = perf_alphas if perf_alphas is not None else [10.0]
+    clusters = clusters if clusters is not None else ['Best']
+    update_freqs = update_freqs if update_freqs is not None else [1]
+    long_onlys = long_onlys if long_onlys is not None else [True]
+    
     results = []
     best_score = -float('inf')
     best_params = {}
     
-    from tqdm.auto import tqdm
+    best_params = {}
     
     # Pre-calculate valid combinations
     combinations = []
@@ -42,6 +53,11 @@ def optimize_supertrend_ai(
                                         combinations.append((length, min_m, max_m, step, alpha, cluster, freq, lo))
                                 
     total_combs = len(combinations)
+    if total_combs == 0:
+        import warnings
+        warnings.warn("No valid parameter combinations found. Returning empty results.")
+        return pd.DataFrame(), {}
+        
     print(f"總共需要測試 {total_combs} 組參數組合。")
     
     for length, min_m, max_m, step, alpha, cluster, freq, lo in tqdm(combinations, desc="優化進度"):
@@ -84,25 +100,29 @@ def optimize_supertrend_ai(
         
         # 寫入資料庫
         best = res_df.iloc[0]
-        save_supertrend_ai_params(
-            ticker=ticker,
-            start_date=start_date,
-            end_date=end_date,
-            atr_length=int(best["atr_length"]),
-            factor_min=float(best["factor_min"]),
-            factor_max=float(best["factor_max"]),
-            factor_step=float(best["factor_step"]),
-            perf_alpha=float(best["perf_alpha"]),
-            from_cluster=str(best["from_cluster"]),
-            update_freq=int(best["update_freq"]),
-            long_only=bool(best["long_only"]),
-            custom_score=float(best["Custom Score"]),
-            cagr=float(best.get("CAGR", 0)),
-            max_drawdown=float(best.get("Max Drawdown", 0)),
-            sharpe_ratio=float(best.get("Sharpe Ratio", 0)),
-            calmar_ratio=float(best.get("Calmar Ratio", 0)),
-            win_rate=float(best.get("Win Rate", 0)),
-            profit_factor=float(best.get("Profit Factor", 0))
-        )
-        
+        try:
+            save_supertrend_ai_params(
+                ticker=ticker,
+                start_date=start_date,
+                end_date=end_date,
+                atr_length=int(best["atr_length"]),
+                factor_min=float(best["factor_min"]),
+                factor_max=float(best["factor_max"]),
+                factor_step=float(best["factor_step"]),
+                perf_alpha=float(best["perf_alpha"]),
+                from_cluster=str(best["from_cluster"]),
+                update_freq=int(best["update_freq"]),
+                long_only=bool(best["long_only"]),
+                custom_score=float(best["Custom Score"]),
+                cagr=float(best.get("CAGR", 0)),
+                max_drawdown=float(best.get("Max Drawdown", 0)),
+                sharpe_ratio=float(best.get("Sharpe Ratio", 0)),
+                calmar_ratio=float(best.get("Calmar Ratio", 0)),
+                win_rate=float(best.get("Win Rate", 0)),
+                profit_factor=float(best.get("Profit Factor", 0))
+            )
+        except Exception as e:
+            import logging
+            logging.error(f"Failed to persist best parameters to database: {e}")
+            
     return res_df, best_params
