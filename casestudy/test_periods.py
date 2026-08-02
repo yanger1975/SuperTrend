@@ -18,12 +18,16 @@ for t, df in data.items():
         common_index = df.index
     else:
         common_index = common_index.intersection(df.index)
+
+if common_index is None or len(common_index) == 0:
+    raise ValueError("No common dates found across tickers after intersection")
+
 common_index = common_index.sort_values()
 
 for t in tickers:
     data[t] = data[t].reindex(common_index).ffill()
 
-years = (common_index[-1] - common_index[0]).days / 365.25
+years = (common_index[-1] - common_index[0]).days / 365.25 if len(common_index) > 1 else 1.0
 
 # Benchmark
 bench_equity = pd.Series(0.0, index=common_index)
@@ -34,11 +38,11 @@ for i in range(1, len(common_index)):
     prev_date = common_index[i-1]
     val = sum(bench_shares[t] * data[t].loc[date, "Close"] for t in tickers)
     bench_equity.iloc[i] = val
-    if date.month != prev_date.month:
+    if date.month != prev_date.month or date.year != prev_date.year:
         for t in tickers:
             bench_shares[t] = (val * 0.25) / data[t].loc[date, "Close"]
 
-bh_cagr = (bench_equity.iloc[-1] / bench_equity.iloc[0]) ** (1.0 / years) - 1.0
+bh_cagr = (bench_equity.iloc[-1] / bench_equity.iloc[0]) ** (1.0 / years) - 1.0 if years > 0 else 0.0
 bench_dd = (bench_equity - bench_equity.cummax()) / bench_equity.cummax()
 
 print(f"Benchmark: CAGR={bh_cagr*100:.2f}%, MaxDD={bench_dd.min()*100:.2f}%")
@@ -84,7 +88,13 @@ for period in [10, 14, 20, 30]:
                 cash += qqq_pos * exit_price * (1 - comm)
                 if qqq_entry_price > 0:
                     pnl = (exit_price - qqq_entry_price) / qqq_entry_price
-                    all_trades.append({"pnl": pnl})
+                    all_trades.append({
+                        "pnl": pnl,
+                        "entry_date": qqq_entry_date,
+                        "entry_price": qqq_entry_price,
+                        "exit_date": date,
+                        "exit_price": exit_price
+                    })
                 qqq_pos = 0.0; qqq_entry_price = 0.0; qqq_entry_date = None
             elif qqq_pos == 0 and trend == 1 and prev_trend == -1:
                 entry_price = close * (1 + slip)
@@ -99,7 +109,13 @@ for period in [10, 14, 20, 30]:
             cash += qqq_pos * exit_price * (1 - comm)
             if qqq_entry_price > 0:
                 pnl = (exit_price - qqq_entry_price) / qqq_entry_price
-                all_trades.append({"pnl": pnl})
+                all_trades.append({
+                    "pnl": pnl,
+                    "entry_date": qqq_entry_date,
+                    "entry_price": qqq_entry_price,
+                    "exit_date": common_index[-1],
+                    "exit_price": exit_price
+                })
             qqq_pos = 0.0
 
         final_val = cash + tlt_shares * data["TLT"].loc[common_index[-1], "Close"] + \
@@ -107,9 +123,20 @@ for period in [10, 14, 20, 30]:
                        gld_shares * data["GLD"].loc[common_index[-1], "Close"]
         equity_curve.iloc[-1] = final_val
 
-        strat_cagr = (final_val / 100000.0) ** (1.0 / years) - 1.0
+        strat_cagr = (final_val / 100000.0) ** (1.0 / years) - 1.0 if years > 0 else 0.0
 
-        trade_objects = [Trade(entry_date=pd.Timestamp.now(), entry_price=1, exit_date=pd.Timestamp.now(), exit_price=1, direction="Long", pnl_pct=t["pnl"], exit_reason="S", is_closed=True) for t in all_trades]
+        trade_objects = [
+            Trade(
+                entry_date=t.get("entry_date", common_index[0]),
+                entry_price=t.get("entry_price", 1.0),
+                exit_date=t.get("exit_date", common_index[-1]),
+                exit_price=t.get("exit_price", 1.0),
+                direction="Long",
+                pnl_pct=t["pnl"],
+                exit_reason="S",
+                is_closed=True
+            ) for t in all_trades
+        ]
         rm = RiskManager(trade_objects, equity_curve)
         metrics = rm.calculate_metrics()
 

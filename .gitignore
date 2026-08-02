@@ -1,4 +1,8 @@
-# 忽略特定的檔案
+# 忽略環境變數與私密金鑰檔案
+.env
+*.env
+*.key
+*.pem
 config.env
 secret.txt
 
@@ -8,9 +12,6 @@ spec/
 .pytest_cache/
 __pycache__/
 
-# 忽略所有結尾為 .log 的檔案
-
-# 忽略資料庫檔案
+# 忽略日誌與資料庫檔案
+*.log
 *.db
-data/*.db
-

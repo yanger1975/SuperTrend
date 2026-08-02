@@ -19,7 +19,6 @@ import os
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
 import pandas as pd
-import numpy as np
 
 # 將 src/ 加入 sys.path 以便 import TrendingScraper
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
@@ -466,7 +465,8 @@ def process_ticker(ticker, args):
         # 3e. 產出 Markdown
         out_dir = os.path.join("data", args.date)
         os.makedirs(out_dir, exist_ok=True)
-        out_path = os.path.join(out_dir, f"{ticker}.md")
+        safe_ticker_name = "".join(c for c in ticker if c.isalnum() or c in ".-_")
+        out_path = os.path.join(out_dir, f"{safe_ticker_name}.md")
 
         report = generate_markdown_report(
             ticker, args, train_df, test_df, best,

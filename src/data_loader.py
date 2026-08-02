@@ -33,14 +33,14 @@ class DataLoader:
         df.index = pd.to_datetime(df.index)
         df = df.sort_index()
 
-        # 4. 價格區間合法性檢查 (High >= max(Open, Close), Low <= min(Open, Close))
-        max_limit = df[["Open", "Close"]].max(axis=1)
-        min_limit = df[["Open", "Close"]].min(axis=1)
-
-        # 若 High 比 Open/Close 還小，則自動校正為 Open/Close 之最大值
-        df["High"] = np.maximum(df["High"], max_limit)
-        # 若 Low 比 Open/Close 還大，則自動校正為 Open/Close 之最小值
-        df["Low"] = np.minimum(df["Low"], min_limit)
+        # 4. 價格區間合法性檢查 (僅針對正常股票/ETF，若 High/Low/Open 均為 0 則視為基金淨值保持原狀)
+        is_fund = (df["Open"] == 0) & (df["High"] == 0) & (df["Low"] == 0)
+        stock_mask = ~is_fund
+        if stock_mask.any():
+            max_limit = df.loc[stock_mask, ["Open", "Close"]].max(axis=1)
+            min_limit = df.loc[stock_mask, ["Open", "Close"]].min(axis=1)
+            df.loc[stock_mask, "High"] = np.maximum(df.loc[stock_mask, "High"], max_limit)
+            df.loc[stock_mask, "Low"] = np.minimum(df.loc[stock_mask, "Low"], min_limit)
 
         return df
 
@@ -48,14 +48,23 @@ class DataLoader:
         """
         獲取歷史 OHLCV 資料。優先查詢本地 SQLite 快取，缺失時向 yfinance 下載並更新快取。
         """
+        # 檢查是否為 EZMoney 基金標的 (.EZ 結尾或存在於 ezmoney.json 中)
+        from src.scrapers.ezmoney_scraper import EzMoneyScraper
+        ez_scraper = EzMoneyScraper(self.storage.db_path)
+        if ticker.endswith(".EZ") or ticker.endswith(".ez") or ticker in ez_scraper.mapping:
+            return ez_scraper.fetch_fund_nav(ticker, start_date, end_date, refresh=refresh)
+
+
         # 統一處理為 UTC naive 時間以便於比對
         start_dt = pd.to_datetime(start_date)
         end_dt = pd.to_datetime(end_date)
+
 
         # 對於 1 小時 (1h / 60m) 資料，yfinance 最長僅支援下載最近 730 日
         # 若指定時間區間超過 730 日，自動將起始日期限制為 730 日內，無需提示錯誤
         if interval.lower() in ["1h", "60m"]:
             max_days = 730
+            orig_start = start_date
             # 1. 若指定時間區間超過 730 日，自動將起始日期限制為 end_dt - 730 日
             if (end_dt - start_dt).days > max_days:
                 start_dt = end_dt - pd.Timedelta(days=max_days)
@@ -66,6 +75,8 @@ class DataLoader:
                 start_dt = earliest_allowed
 
             start_date = start_dt.strftime("%Y-%m-%d")
+            if start_date != orig_start:
+                self.logger.warning("1 小時頻率資料請求區間超過 yfinance 730 日限制，起始日期已自動調整: %s -> %s", orig_start, start_date)
 
         if not refresh:
             # 優先從 SQLite 查詢

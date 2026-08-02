@@ -11,9 +11,16 @@ on:
     - cron: '0 23 * * 6'
   workflow_dispatch: # 支援在 GitHub 網頁上手動點擊執行測試
 
+concurrency:
+  group: daily-signals-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   scan-and-notify:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout Code
@@ -23,6 +30,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
 
       - name: Install Dependencies
         run: |
@@ -56,6 +64,9 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add data/optimized_params.json data/most-active.json
-          git commit -m "auto: update optimized_params.json and most-active.json [skip ci]" || exit 0
-          git push
-
+          if ! git diff --staged --quiet; then
+            git commit -m "auto: update optimized_params.json and most-active.json [skip ci]"
+            git push
+          else
+            echo "No changes to commit."
+          fi

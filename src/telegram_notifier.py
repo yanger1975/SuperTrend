@@ -1,6 +1,7 @@
 import os
 import time
 import logging
+import html
 from typing import List, Optional
 import requests
 
@@ -32,8 +33,15 @@ def _read_env_file(env_path: str = ".env") -> dict:
                     value = value.strip().strip('"').strip("'")
                     env_vars[key] = value
         except Exception as e:
-            logger.warning(f"讀取 .env 檔案時發生錯誤: {e}")
+            logger.warning("讀取 .env 檔案時發生錯誤: %s", e)
     return env_vars
+
+
+def escape_html(text: str) -> str:
+    """
+    對動態插入 Telegram HTML 訊息中的文字進行轉義，防止 HTML 標籤注入。
+    """
+    return html.escape(str(text))
 
 
 class TelegramNotifier:
@@ -66,7 +74,12 @@ class TelegramNotifier:
             if not self.chat_id:
                 self.chat_id = env_file_vars.get("TELEGRAM_CHAT_ID")
 
-        self.api_url = f"https://api.telegram.org/bot{self.bot_token}/sendMessage" if self.bot_token else ""
+    @property
+    def api_url(self) -> str:
+        """動態生成 API URL，避免直接儲存 Token 在公開屬性或 traceback 中。"""
+        if not self.bot_token:
+            return ""
+        return f"https://api.telegram.org/bot{self.bot_token}/sendMessage"
 
     def is_configured(self) -> bool:
         """檢查是否有設定必要的 Token 與 Chat ID。"""
@@ -123,6 +136,7 @@ class TelegramNotifier:
             logger.warning("Telegram Bot Token 或 Chat ID 未設定，無法發送訊息。")
             return False
 
+        url = self.api_url
         chunks = self.split_message(text)
         all_success = True
 
@@ -137,22 +151,22 @@ class TelegramNotifier:
             sent = False
             for attempt in range(1, max_retries + 1):
                 try:
-                    resp = requests.post(self.api_url, json=payload, timeout=10)
+                    resp = requests.post(url, json=payload, timeout=10)
                     if resp.status_code == 200 and resp.json().get("ok"):
                         sent = True
                         break
                     else:
                         logger.warning(
-                            f"Telegram API 回應失敗 [Attempt {attempt}/{max_retries}]: "
-                            f"HTTP {resp.status_code} - {resp.text}"
+                            "Telegram API 回應失敗 [Attempt %d/%d]: HTTP %d",
+                            attempt, max_retries, resp.status_code
                         )
-                except Exception as e:
-                    logger.warning(f"Telegram API 呼叫例外 [Attempt {attempt}/{max_retries}]: {e}")
+                except requests.RequestException as e:
+                    logger.warning("Telegram API 呼叫例外 [Attempt %d/%d]: %s", attempt, max_retries, e)
 
                 time.sleep(attempt * 2)
 
             if not sent:
                 all_success = False
-                logger.error(f"Telegram 訊息 Chunk [{idx+1}/{len(chunks)}] 發送失敗。")
+                logger.error("Telegram 訊息 Chunk [%d/%d] 發送失敗。", idx + 1, len(chunks))
 
         return all_success

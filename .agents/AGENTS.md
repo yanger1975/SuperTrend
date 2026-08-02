@@ -7,3 +7,6 @@
 ## File format
 - Windows line ending
 - Unicode UTF-8 no-BOM
+
+## Temporary/Transient files storage
+- Place all  not be committed, transient files in the temp/ directory. Create the directory automatically if it does not exist.

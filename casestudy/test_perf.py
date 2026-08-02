@@ -15,7 +15,7 @@ df_raw = loader.fetch_data(ticker, start_date=start_date, end_date=end_date, int
 print(f"Loaded {ticker}: {len(df_raw)} bars")
 
 # Calculate indicators
-df_indicators, trend = compute_supertrend(df_raw, period=10, multiplier=3.0)
+df_indicators, _ = compute_supertrend(df_raw, period=10, multiplier=3.0)
 df_indicators["HMA"] = compute_hma(df_indicators["Close"], period=200)
 df_indicators["MA_Filter"] = df_indicators["Close"] > df_indicators["HMA"]
 df_indicators["ADX"] = compute_adx(df_indicators, period=14)
@@ -43,23 +43,34 @@ for k, v in metrics.items():
     print(f"  {k}: {v}")
 
 # Buy & Hold metrics
-years = (equity.index[-1] - equity.index[0]).days / 365.25
-bh_cagr = (benchmark.iloc[-1] / benchmark.iloc[0]) ** (1.0 / years) - 1.0
-print(f"\n=== Buy & Hold (Benchmark) ===")
-print(f"  CAGR: {bh_cagr*100:.2f}%")
-print(f"  Final Value: ${benchmark.iloc[-1]:,.2f}")
-print(f"  Strategy Final Value: ${equity.iloc[-1]:,.2f}")
-print(f"  CAGR Gap: {(bh_cagr - metrics['CAGR'])*100:.2f}%")
+if equity.empty or benchmark.empty:
+    print("\nWarning: Equity or benchmark series is empty, skipping CAGR calculation")
+else:
+    days = (equity.index[-1] - equity.index[0]).days
+    years = days / 365.25 if days > 0 else 0.0
+    if years <= 0 or benchmark.iloc[0] <= 0:
+        print("\nWarning: Time period too short or invalid baseline for CAGR calculation")
+        bh_cagr = 0.0
+    else:
+        bh_cagr = (benchmark.iloc[-1] / benchmark.iloc[0]) ** (1.0 / years) - 1.0
 
-# Trade stats
-closed = [t for t in trades if t.is_closed]
-print(f"\n=== Trade Stats ===")
-print(f"  Total trades: {len(closed)}")
-print(f"  Trades per year: {len(closed)/years:.2f}")
-total_days_in_market = sum((t.exit_date - t.entry_date).days for t in closed if t.exit_date)
-print(f"  Time in market: {total_days_in_market / (years*365)*100:.1f}%")
+    print(f"\n=== Buy & Hold (Benchmark) ===")
+    print(f"  CAGR: {bh_cagr*100:.2f}%")
+    print(f"  Final Value: ${benchmark.iloc[-1]:,.2f}")
+    print(f"  Strategy Final Value: ${equity.iloc[-1]:,.2f}")
+    print(f"  CAGR Gap: {(bh_cagr - metrics.get('CAGR', 0))*100:.2f}%")
 
-# Show trades
-print("\n=== All Trades ===")
-for t in closed:
-    print(f"  {t.entry_date.date()} -> {t.exit_date.date()} | PnL: {t.pnl_pct*100:.2f}% | Reason: {t.exit_reason} | Days: {(t.exit_date - t.entry_date).days}")
+    # Trade stats
+    closed = [t for t in trades if t.is_closed]
+    print(f"\n=== Trade Stats ===")
+    print(f"  Total trades: {len(closed)}")
+    if years > 0:
+        print(f"  Trades per year: {len(closed)/years:.2f}")
+        total_days_in_market = sum((t.exit_date - t.entry_date).days for t in closed if t.exit_date)
+        print(f"  Time in market: {total_days_in_market / (years*365)*100:.1f}%")
+
+    # Show trades
+    print("\n=== All Trades ===")
+    for t in closed:
+        if t.entry_date and t.exit_date:
+            print(f"  {t.entry_date.date()} -> {t.exit_date.date()} | PnL: {t.pnl_pct*100:.2f}% | Reason: {t.exit_reason} | Days: {(t.exit_date - t.entry_date).days}")

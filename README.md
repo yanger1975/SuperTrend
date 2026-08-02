@@ -177,10 +177,13 @@ python run_dca_optimizer.py --symbol 0050.TW
 
 ### B. SQLite 資料庫與 JSON 版控
 - `data/market_data.db` (本地快取資料庫):
-  - `price_history`: 儲存歷史 OHLCV K 線價格資料 (主鍵: `ticker, interval, datetime`)。
+  - `price_history`: 儲存歷史 OHLCV K 線價格與基金淨值資料 (主鍵: `ticker, interval, datetime`)。針對共同基金淨值，Open/High/Low/Volume 欄位補 0.0，Close 為每日淨值 (NAV)。
+  - `ticker_info`: 儲存標的元數據 (主鍵: `ticker`)，包含中文全名 (`name`)、資產類別 (`asset_type='fund'|'etf'|'stock'`) 與資料來源 (`source='ezmoney'|'yfinance'`)。
   - `supertrend_params`: 儲存各標的最適參數與績效指標 (主鍵: `ticker, start_date, end_date`)。
   - `stock_signals`: 儲存最新交易日持倉狀態 (1=long, 0=cash)、進出場參考點與 HMA 數值 (主鍵: `ticker, start_date, end_date`)。
 - `data/optimized_params.json`: 輕量化 JSON 格式之最適參數備份檔案，負責跨環境（如 GitHub Actions CI/CD）與 Git 版本控制之參數同步。
+- `data/ezmoney.json`: 存放 EZMoney 統一投信共同基金之中文全名與 API 代號對照檔 (如 `"統一全球新科技基金": "33YTW"`)。標的代碼採用 `.EZ` 後綴做為資料庫鍵值 (如 `33YTW.EZ`)。
+
 
 ---
 
