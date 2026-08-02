@@ -11,6 +11,8 @@ def run_supertrend_ai_backtest(df: pd.DataFrame,
                               step: float = 0.5,
                               perf_alpha: float = 10.0,
                               from_cluster: str = 'Best',
+                              update_freq: int = 1,
+                              long_only: bool = True,
                               stop_loss_pct: float = 0.0,
                               take_profit_pct: float = 0.0,
                               commission_bps: float = 0.0,
@@ -20,7 +22,7 @@ def run_supertrend_ai_backtest(df: pd.DataFrame,
     執行 SuperTrend AI 策略回測，返回交易紀錄、資金曲線、基準曲線、加上指標的 DataFrame 與績效指標。
     """
     # 1. 產生 SuperTrend AI 指標
-    df_ind = supertrend_ai(df.copy(), length, min_mult, max_mult, step, perf_alpha, from_cluster, show_progress=show_progress)
+    df_ind = supertrend_ai(df.copy(), length, min_mult, max_mult, step, perf_alpha, from_cluster, update_freq=update_freq, show_progress=show_progress)
     
     # 2. 轉換欄位供回測引擎使用 (Trend=1 為多頭, -1 為空頭)
     df_ind['Trend'] = df_ind['SuperTrend_AI_Direction'].replace({0: -1})
@@ -33,7 +35,7 @@ def run_supertrend_ai_backtest(df: pd.DataFrame,
     # 3. 執行回測
     engine = BacktestEngine(df_ind)
     trades, equity, benchmark = engine.run(
-        long_only=True,
+        long_only=long_only,
         stop_loss_pct=stop_loss_pct,
         take_profit_pct=take_profit_pct,
         commission_bps=commission_bps,

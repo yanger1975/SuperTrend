@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from sklearn.cluster import KMeans
+from src.supertrend_ai.kmeans import kmeans_1d_labels
 from tqdm.auto import tqdm
 import warnings
 
@@ -77,6 +77,7 @@ def compute_supertrend_core(high, low, close, atr, factor):
 
 def supertrend_ai(df, length=10, min_mult=1.0, max_mult=5.0, step=0.5, perf_alpha: float = 10.0,
     from_cluster: str = 'Best',
+    update_freq: int = 1,
     show_progress: bool = False
 ) -> pd.DataFrame:
     """
@@ -120,22 +121,26 @@ def supertrend_ai(df, length=10, min_mult=1.0, max_mult=5.0, step=0.5, perf_alph
         iterator = tqdm(iterator, desc="SuperTrend AI 逐 K 線聚類運算", leave=False)
         
     for i in iterator:
+        if i == 0:
+            continue
+            
         row_perf = perf_vals[i]
         if np.isnan(row_perf).any():
             continue
             
-        data = row_perf.reshape(-1, 1)
-        
-        # Initialize K-Means
         if len(factors) == 0:
             target_factors[i] = target_factors[i-1]
             continue
             
+        if update_freq > 1 and i % update_freq != 0 and i > 0 and not np.isnan(target_factors[i-1]):
+            target_factors[i] = target_factors[i-1]
+            continue
+            
+        data = row_perf
         n_clusters = min(3, len(factors))
-        kmeans = KMeans(n_clusters=n_clusters, n_init=10, random_state=42)
-        kmeans.fit(data)
         
-        centers = kmeans.cluster_centers_.flatten()
+        centers, labels = kmeans_1d_labels(data, k=n_clusters)
+        
         sorted_indices = np.argsort(centers) 
         
         if n_clusters == 3:
@@ -154,7 +159,7 @@ def supertrend_ai(df, length=10, min_mult=1.0, max_mult=5.0, step=0.5, perf_alph
             from_idx = 0
             
         target_original_label = sorted_indices[from_idx]
-        mask = (kmeans.labels_ == target_original_label)
+        mask = (labels == target_original_label)
         target_f = np.mean(factors[mask]) if np.any(mask) else np.mean(factors)
         
         target_factors[i] = target_f

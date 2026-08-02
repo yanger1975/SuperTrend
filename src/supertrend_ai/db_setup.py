@@ -42,6 +42,13 @@ def init_supertrend_ai_db():
                 PRIMARY KEY (ticker, start_date, end_date)
             )
         """)
+        
+        # Check if update_freq column exists, add it if not
+        cursor.execute("PRAGMA table_info(strategy_params_supertrend_ai)")
+        columns = [row[1] for row in cursor.fetchall()]
+        if "update_freq" not in columns:
+            cursor.execute("ALTER TABLE strategy_params_supertrend_ai ADD COLUMN update_freq INTEGER DEFAULT 1")
+            
         conn.commit()
     finally:
         conn.close()
@@ -56,6 +63,7 @@ def save_supertrend_ai_params(
     factor_step: float,
     perf_alpha: float,
     from_cluster: str,
+    update_freq: int = 1,
     custom_score: float = None,
     cagr: float = None,
     max_drawdown: float = None,
@@ -71,10 +79,10 @@ def save_supertrend_ai_params(
         cursor.execute("""
             INSERT INTO strategy_params_supertrend_ai (
                 ticker, start_date, end_date, atr_length, factor_min,
-                factor_max, factor_step, perf_alpha, from_cluster,
+                factor_max, factor_step, perf_alpha, from_cluster, update_freq,
                 custom_score, cagr, max_drawdown, sharpe_ratio,
                 calmar_ratio, win_rate, profit_factor
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(ticker, start_date, end_date) DO UPDATE SET
                 atr_length=excluded.atr_length,
                 factor_min=excluded.factor_min,
@@ -82,6 +90,7 @@ def save_supertrend_ai_params(
                 factor_step=excluded.factor_step,
                 perf_alpha=excluded.perf_alpha,
                 from_cluster=excluded.from_cluster,
+                update_freq=excluded.update_freq,
                 custom_score=excluded.custom_score,
                 cagr=excluded.cagr,
                 max_drawdown=excluded.max_drawdown,
@@ -92,7 +101,7 @@ def save_supertrend_ai_params(
                 updated_at=CURRENT_TIMESTAMP
         """, (
             ticker, start_date, end_date, atr_length, factor_min,
-            factor_max, factor_step, perf_alpha, from_cluster,
+            factor_max, factor_step, perf_alpha, from_cluster, update_freq,
             float(custom_score) if custom_score is not None else None,
             float(cagr) if cagr is not None else None,
             float(max_drawdown) if max_drawdown is not None else None,
