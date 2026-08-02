@@ -11,6 +11,7 @@ spec/
 .ipynb_checkpoints/
 .pytest_cache/
 __pycache__/
+temp/
 
 # 忽略日誌與資料庫檔案
 *.log

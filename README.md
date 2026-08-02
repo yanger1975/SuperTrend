@@ -22,6 +22,8 @@
   * 支援計算 **Ulcer Index (潰瘍指數)**、**Expectancy (交易期望值)**、最大連續盈虧等指標。並可隨機抽樣進行 5,000 次模擬，輸出 50% 至 99% 的最壞最大回撤風險報告。
 * **Walk-Forward 樣本外優化 (`src/optimizer.py`):**
   * 支援設定 Train/Test 比例進行樣本外驗證，並可自定義綜合得分公式，產出參數熱力圖，協助您鎖定穩健參數的「高原區 (Plateau)」。
+* **SuperTrend AI 機器學習動態尋優 (`src/supertrend_ai/`):**
+  * 基於 K-Means 演算法 (scikit-learn)，即時依據不同參數組合的歷史表現 (Performance Memory) 進行聚類，動態選取最適 Factor，讓策略擁有自我適應盤勢的能力。
 
 ---
 
@@ -102,6 +104,8 @@ python -m notebook SuperTrend_Backtester.ipynb
 * **Cell 7:** 執行 5,000 次 Monte Carlo 風險模擬，輸出 50%/75%/90%/95%/99% 最大回撤風險分位數。
 * **Cell 8:** 進行樣本外優化與繪製參數高原熱力圖，協助挑選最穩健參數。
 
+本系統另提供 `SuperTrend_AI_Backtester.ipynb`，專供測試結合 K-Means 動態聚類的 SuperTrend AI 策略。
+
 ---
 
 ### C. 每日交易訊號掃描與 Telegram 通知 (`run_daily_scanner.py`)
@@ -180,6 +184,7 @@ python run_dca_optimizer.py --symbol 0050.TW
   - `price_history`: 儲存歷史 OHLCV K 線價格與基金淨值資料 (主鍵: `ticker, interval, datetime`)。針對共同基金淨值，Open/High/Low/Volume 欄位補 0.0，Close 為每日淨值 (NAV)。
   - `ticker_info`: 儲存標的元數據 (主鍵: `ticker`)，包含中文全名 (`name`)、資產類別 (`asset_type='fund'|'etf'|'stock'`) 與資料來源 (`source='ezmoney'|'yfinance'`)。
   - `supertrend_params`: 儲存各標的最適參數與績效指標 (主鍵: `ticker, start_date, end_date`)。
+  - `strategy_params_supertrend_ai`: 儲存 SuperTrend AI 策略的最適參數與績效指標 (主鍵: `ticker, start_date, end_date`)。
   - `stock_signals`: 儲存最新交易日持倉狀態 (1=long, 0=cash)、進出場參考點與 HMA 數值 (主鍵: `ticker, start_date, end_date`)。
 - `data/optimized_params.json`: 輕量化 JSON 格式之最適參數備份檔案，負責跨環境（如 GitHub Actions CI/CD）與 Git 版本控制之參數同步。
 - `data/ezmoney.json`: 存放 EZMoney 統一投信共同基金之中文全名與 API 代號對照檔 (如 `"統一全球新科技基金": "33YTW"`)。標的代碼採用 `.EZ` 後綴做為資料庫鍵值 (如 `33YTW.EZ`)。

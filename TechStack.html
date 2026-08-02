@@ -332,6 +332,13 @@
                         <li>**互動研究環境 (`notebooks/DCA_AddOn_Strategy_Research.ipynb`)**：提供單頁 Plotly 三連動互動圖表（點位散點圖、投入資金 vs 市值、平均持倉成本與水下圖）及熱力圖分析。</li>
                         <li>**CLI 工具 (`run_dca_backtest.py` & `run_dca_optimizer.py`)**：支援單次回測與批次參數最佳化產出。</li>
                     </ul>
+
+                    <h3>11. SuperTrend AI 動態尋優模組 (src/supertrend_ai/)</h3>
+                    <ul>
+                        <li>**動態因子選擇**：基於 Scikit-Learn `KMeans` 對過去歷史績效 (Performance Memory) 進行自動分群 (3 群)，從多組不同的 SuperTrend 參數 (Factor) 中，自動選取最適當下盤勢的動態因子。</li>
+                        <li>**網格優化與回測報告**：內建 `optimizer.py` 用以掃描最佳學習參數 (例如學習長度與目標群集)，並透過 `reporter.py` 生成包含逐月報酬率矩陣的詳細 Markdown 回測報告。</li>
+                        <li>**獨立儲存**：新設 `strategy_params_supertrend_ai` 表格專門儲存此機器學習策略之最適參數，達成與傳統策略資料互不干擾的擴充架構。</li>
+                    </ul>
                 </div>
 
 
@@ -375,6 +382,7 @@
                         <div class="tech-tag">numpy <span>2.5.1</span></div>
                         <div class="tech-tag">yfinance <span>1.5.1</span></div>
                         <div class="tech-tag">plotly <span>6.9.0</span></div>
+                        <div class="tech-tag">scikit-learn <span>1.5.0</span></div>
                         <div class="tech-tag">sqlite3 <span>built-in</span></div>
                         <div class="tech-tag">pytest <span>8.2.2</span></div>
                     </div>

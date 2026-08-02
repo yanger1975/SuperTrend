@@ -1,0 +1,115 @@
+import sqlite3
+import pandas as pd
+import os
+from typing import Optional
+
+DB_PATH = "data/market_data.db"
+
+def get_connection() -> sqlite3.Connection:
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    conn = sqlite3.connect(DB_PATH, timeout=10.0)
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA busy_timeout=10000")
+    except sqlite3.Error:
+        pass
+    return conn
+
+def init_supertrend_ai_db():
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS strategy_params_supertrend_ai (
+                ticker TEXT NOT NULL,
+                start_date TEXT NOT NULL,
+                end_date TEXT NOT NULL,
+                atr_length INTEGER NOT NULL,
+                factor_min REAL NOT NULL,
+                factor_max REAL NOT NULL,
+                factor_step REAL NOT NULL,
+                perf_alpha REAL NOT NULL,
+                from_cluster TEXT NOT NULL,
+                custom_score REAL,
+                cagr REAL,
+                max_drawdown REAL,
+                sharpe_ratio REAL,
+                calmar_ratio REAL,
+                win_rate REAL,
+                profit_factor REAL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (ticker, start_date, end_date)
+            )
+        """)
+        conn.commit()
+    finally:
+        conn.close()
+
+def save_supertrend_ai_params(
+    ticker: str,
+    start_date: str,
+    end_date: str,
+    atr_length: int,
+    factor_min: float,
+    factor_max: float,
+    factor_step: float,
+    perf_alpha: float,
+    from_cluster: str,
+    custom_score: float = None,
+    cagr: float = None,
+    max_drawdown: float = None,
+    sharpe_ratio: float = None,
+    calmar_ratio: float = None,
+    win_rate: float = None,
+    profit_factor: float = None
+):
+    init_supertrend_ai_db()
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO strategy_params_supertrend_ai (
+                ticker, start_date, end_date, atr_length, factor_min,
+                factor_max, factor_step, perf_alpha, from_cluster,
+                custom_score, cagr, max_drawdown, sharpe_ratio,
+                calmar_ratio, win_rate, profit_factor
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(ticker, start_date, end_date) DO UPDATE SET
+                atr_length=excluded.atr_length,
+                factor_min=excluded.factor_min,
+                factor_max=excluded.factor_max,
+                factor_step=excluded.factor_step,
+                perf_alpha=excluded.perf_alpha,
+                from_cluster=excluded.from_cluster,
+                custom_score=excluded.custom_score,
+                cagr=excluded.cagr,
+                max_drawdown=excluded.max_drawdown,
+                sharpe_ratio=excluded.sharpe_ratio,
+                calmar_ratio=excluded.calmar_ratio,
+                win_rate=excluded.win_rate,
+                profit_factor=excluded.profit_factor,
+                updated_at=CURRENT_TIMESTAMP
+        """, (
+            ticker, start_date, end_date, atr_length, factor_min,
+            factor_max, factor_step, perf_alpha, from_cluster,
+            float(custom_score) if custom_score is not None else None,
+            float(cagr) if cagr is not None else None,
+            float(max_drawdown) if max_drawdown is not None else None,
+            float(sharpe_ratio) if sharpe_ratio is not None else None,
+            float(calmar_ratio) if calmar_ratio is not None else None,
+            float(win_rate) if win_rate is not None else None,
+            float(profit_factor) if profit_factor is not None else None
+        ))
+        conn.commit()
+    finally:
+        conn.close()
+
+def query_supertrend_ai_params(ticker: str) -> pd.DataFrame:
+    init_supertrend_ai_db()
+    conn = get_connection()
+    try:
+        query = "SELECT * FROM strategy_params_supertrend_ai WHERE ticker=? ORDER BY updated_at DESC"
+        return pd.read_sql_query(query, conn, params=(ticker,))
+    finally:
+        conn.close()
