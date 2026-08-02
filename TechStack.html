@@ -336,6 +336,7 @@
                     <h3>11. SuperTrend AI 動態尋優模組 (src/supertrend_ai/)</h3>
                     <ul>
                         <li>**動態因子選擇 (Numba JIT 加速)**：我們採用 Numba `njit` 重寫了 1D KMeans 演算法 (`kmeans.py`) 取代原先的 `scikit-learn`，大幅度解決了逐根 K 線即時運算的效能瓶頸。該模型依據過去歷史績效 (Performance Memory) 進行自動分群 (預設 3 群)，選取最適當下盤勢的動態因子。</li>
+                        <li>**詳細參數與調整教學**：AI 版由於具備動態調整與多空支援，參數組合較多（包含 `lengths`, `min_mults`, `max_mults`, `perf_alphas`, `long_onlys` 等），詳細的擴充與調整指南請參閱 <a href="docs/supertrend_ai_parameters.md" target="_blank">SuperTrend AI 參數說明與調整指南</a>。</li>
                         <li>**取樣頻率調整 (Downsampling)**：除了 Numba 的底層加速，我們還加入了 `update_freq` 參數。預設為 `1` (每根 K 線皆重新運算)，若在超大資料集下需要提升效能，可將參數調整為 `5` 或 `10`，代表每 5-10 根 K 線才重新聚類一次，在稍微犧牲即時性的情況下取得極致效能。</li>
                         <li>**網格優化與回測報告**：內建 `optimizer.py` 用以掃描最佳學習參數 (例如學習長度與目標群集)，並透過 `reporter.py` 生成包含逐月報酬率矩陣的詳細 Markdown 回測報告。</li>
                         <li>**獨立儲存**：新設 `strategy_params_supertrend_ai` 表格專門儲存此機器學習策略之最適參數 (包含 `update_freq` 欄位)，達成與傳統策略資料互不干擾的擴充架構。</li>

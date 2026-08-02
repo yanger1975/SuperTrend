@@ -15,7 +15,7 @@ def optimize_supertrend_ai(
     perf_alphas: List[float] = [10.0],
     clusters: List[str] = ['Best'],
     update_freqs: List[int] = [1],
-    long_only: bool = True,
+    long_onlys: List[bool] = [True],
     target_metric: str = "Custom Score"
 ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
     """
@@ -37,13 +37,14 @@ def optimize_supertrend_ai(
                     for alpha in perf_alphas:
                         for cluster in clusters:
                             for freq in update_freqs:
-                                if min_m < max_m:
-                                    combinations.append((length, min_m, max_m, step, alpha, cluster, freq))
+                                for lo in long_onlys:
+                                    if min_m < max_m:
+                                        combinations.append((length, min_m, max_m, step, alpha, cluster, freq, lo))
                                 
     total_combs = len(combinations)
     print(f"總共需要測試 {total_combs} 組參數組合。")
     
-    for length, min_m, max_m, step, alpha, cluster, freq in tqdm(combinations, desc="優化進度"):
+    for length, min_m, max_m, step, alpha, cluster, freq, lo in tqdm(combinations, desc="優化進度"):
         trades, equity, benchmark, df_ind, metrics = run_supertrend_ai_backtest(
             df=df,
             length=length,
@@ -53,7 +54,7 @@ def optimize_supertrend_ai(
             perf_alpha=alpha,
             from_cluster=cluster,
             update_freq=freq,
-            long_only=long_only,
+            long_only=lo,
             show_progress=False # Disable inner progress bar during optimization to avoid clutter
         )
                             
@@ -67,6 +68,7 @@ def optimize_supertrend_ai(
             "perf_alpha": alpha,
             "from_cluster": cluster,
             "update_freq": freq,
+            "long_only": lo,
             "Custom Score": score
         }
         res_item.update(metrics)
@@ -93,6 +95,7 @@ def optimize_supertrend_ai(
             perf_alpha=float(best["perf_alpha"]),
             from_cluster=str(best["from_cluster"]),
             update_freq=int(best["update_freq"]),
+            long_only=bool(best["long_only"]),
             custom_score=float(best["Custom Score"]),
             cagr=float(best.get("CAGR", 0)),
             max_drawdown=float(best.get("Max Drawdown", 0)),

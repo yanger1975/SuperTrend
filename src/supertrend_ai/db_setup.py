@@ -49,6 +49,10 @@ def init_supertrend_ai_db():
         if "update_freq" not in columns:
             cursor.execute("ALTER TABLE strategy_params_supertrend_ai ADD COLUMN update_freq INTEGER DEFAULT 1")
             
+        if "long_only" not in columns:
+            cursor.execute("ALTER TABLE strategy_params_supertrend_ai ADD COLUMN long_only INTEGER DEFAULT 1")
+
+            
         conn.commit()
     finally:
         conn.close()
@@ -64,6 +68,7 @@ def save_supertrend_ai_params(
     perf_alpha: float,
     from_cluster: str,
     update_freq: int = 1,
+    long_only: bool = True,
     custom_score: float = None,
     cagr: float = None,
     max_drawdown: float = None,
@@ -79,10 +84,10 @@ def save_supertrend_ai_params(
         cursor.execute("""
             INSERT INTO strategy_params_supertrend_ai (
                 ticker, start_date, end_date, atr_length, factor_min,
-                factor_max, factor_step, perf_alpha, from_cluster, update_freq,
+                factor_max, factor_step, perf_alpha, from_cluster, update_freq, long_only,
                 custom_score, cagr, max_drawdown, sharpe_ratio,
                 calmar_ratio, win_rate, profit_factor
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(ticker, start_date, end_date) DO UPDATE SET
                 atr_length=excluded.atr_length,
                 factor_min=excluded.factor_min,
@@ -91,6 +96,7 @@ def save_supertrend_ai_params(
                 perf_alpha=excluded.perf_alpha,
                 from_cluster=excluded.from_cluster,
                 update_freq=excluded.update_freq,
+                long_only=excluded.long_only,
                 custom_score=excluded.custom_score,
                 cagr=excluded.cagr,
                 max_drawdown=excluded.max_drawdown,
@@ -101,7 +107,7 @@ def save_supertrend_ai_params(
                 updated_at=CURRENT_TIMESTAMP
         """, (
             ticker, start_date, end_date, atr_length, factor_min,
-            factor_max, factor_step, perf_alpha, from_cluster, update_freq,
+            factor_max, factor_step, perf_alpha, from_cluster, update_freq, int(long_only),
             float(custom_score) if custom_score is not None else None,
             float(cagr) if cagr is not None else None,
             float(max_drawdown) if max_drawdown is not None else None,
