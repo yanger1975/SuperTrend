@@ -19,8 +19,8 @@ import argparse
 import traceback
 from datetime import datetime, timedelta
 import pandas as pd
-import yfinance as yf
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from dateutil.relativedelta import relativedelta
 
 # Ensure stdout supports UTF-8 (e.g. for printing emojis on Windows console)
 if hasattr(sys.stdout, "reconfigure"):
@@ -37,6 +37,12 @@ from src.data_loader import DataLoader
 from src.telegram_notifier import TelegramNotifier
 from src.scrapers.ezmoney_scraper import EzMoneyScraper
 
+def validate_ticker(ticker: str) -> bool:
+    if not ticker or not isinstance(ticker, str): return False
+    ticker = ticker.strip()
+    if not ticker or any(c in ticker for c in [" ", "\t", "\n"]) or len(ticker) > 20: return False
+    return True
+
 def collect_tickers() -> list:
     must_have_path = "data/supertrend_ai_tickers.json"
     if not os.path.exists(must_have_path):
@@ -46,11 +52,11 @@ def collect_tickers() -> list:
     with open(must_have_path, "r", encoding="utf-8") as f:
         tickers = json.load(f)
         
-    # 去除重複並保留順序
+    # 去除重複並保留順序，並進行基本驗證
     seen = set()
     unique_tickers = []
     for t in tickers:
-        if t not in seen:
+        if t not in seen and validate_ticker(t):
             seen.add(t)
             unique_tickers.append(t)
             
@@ -76,6 +82,9 @@ def generate_all_summary_report(results: list, args) -> str:
     # 排序：Long 排在最前面，同部位群內按 Ticker 字母排序
     valid_signals.sort(key=lambda x: (x["pos_order"], x["ticker"]))
 
+    if args.date is None:
+        args.date = datetime.now().strftime("%Y-%m-%d")
+        
     latest_date = valid_signals[0]["date"] if valid_signals else args.date
 
     lines = []
@@ -101,7 +110,7 @@ def process_ticker(ticker, args):
     """
     print(f"[{ticker}] 開始處理...")
     try:
-        start_date = (datetime.now() - timedelta(days=5*365)).strftime("%Y-%m-%d")
+        start_date = (datetime.now() - relativedelta(years=5)).strftime("%Y-%m-%d")
         end_date = datetime.now().strftime("%Y-%m-%d")
         
         loader = DataLoader()
@@ -210,7 +219,7 @@ def process_ticker(ticker, args):
         }
 
         # 輸出單一標的 Markdown
-        out_dir = os.path.join("data", f"{args.date}_AI")
+        out_dir = os.path.join("data", f"{args.date.replace('-', '')}_AI")
         md_report = generate_supertrend_ai_report(
             ticker=ticker,
             start_date=start_date,
@@ -227,6 +236,12 @@ def process_ticker(ticker, args):
         safe_ticker_name = "".join(c for c in ticker if c.isalnum() or c in ".-_")
         out_path = os.path.join(out_dir, f"{safe_ticker_name}_AI.md")
 
+        used_params["start_date"] = start_date
+        used_params["end_date"] = end_date
+        # 統一處理 custom_score 的 key 大小寫
+        if "Custom Score" in used_params and "custom_score" not in used_params:
+            used_params["custom_score"] = used_params["Custom Score"]
+            
         print(f"[{ticker}] 報告已輸出: {out_path} ({position_str})")
         return {"ticker": ticker, "success": True, "path": out_path, "error": None, "latest_signal": latest_signal, "opt_params": used_params}
 
@@ -240,18 +255,18 @@ def main():
     parser = argparse.ArgumentParser(description="SuperTrend AI 批次自動優化與回測腳本")
     parser.add_argument("--force", action="store_true", help="強制重新進行網格優化（無視資料庫既有紀錄）")
     parser.add_argument("--workers", type=int, default=4, help="並行處理的 worker 數量 (預設: 4)")
-    parser.add_argument("--date", type=str, default=None, help="輸出目錄的日期鍵 yyyyMMdd (預設: 今天)")
+    parser.add_argument("--date", type=str, default=None, help="輸出目錄的日期鍵 YYYY-MM-DD (預設: 今天)")
     parser.add_argument("--telegram", action="store_true", help="執行完畢後發送 Telegram 通知")
     parser.add_argument("--dry-run", action="store_true", help="僅印出 Telegram 報告內容，不實際發送")
     
     args = parser.parse_args()
     
     if args.date is None:
-        args.date = datetime.now().strftime("%Y%m%d")
+        args.date = datetime.now().strftime("%Y-%m-%d")
         
     print(f"SuperTrend AI Batch Optimization Runner")
     print(f"  強制優化: {'是' if args.force else '否 (從資料庫載入既有參數)'}")
-    print(f"  輸出目錄: data/{args.date}_AI/")
+    print(f"  輸出目錄: data/{args.date.replace('-', '')}_AI/")
     print(f"  並行數:   {args.workers}")
     print()
     
@@ -264,7 +279,7 @@ def main():
     print("=" * 60)
     
     results = []
-    with ThreadPoolExecutor(max_workers=args.workers) as executor:
+    with ProcessPoolExecutor(max_workers=args.workers) as executor:
         futures = {
             executor.submit(process_ticker, ticker, args): ticker
             for ticker in tickers
@@ -288,13 +303,13 @@ def main():
             
     if success:
         all_md_content = generate_all_summary_report(results, args)
-        all_md_path = os.path.join("data", f"{args.date}_AI", "All_AI.md")
+        all_md_path = os.path.join("data", f"{args.date.replace('-', '')}_AI", "All_AI.md")
         with open(all_md_path, "w", encoding="utf-8") as f:
             f.write(all_md_content)
         print(f"  OK  All Summary -> {all_md_path}")
         
         
-    print(f"報告目錄: data/{args.date}_AI/")
+    print(f"報告目錄: data/{args.date.replace('-', '')}_AI/")
 
     if args.telegram or args.dry_run:
         # 當傳入 --force 時，視為「週六強制優化」模式
@@ -371,12 +386,13 @@ def build_telegram_ai_report(results: list, args, is_saturday: bool) -> list:
         else:
             # 平日 (一至五) 報告格式
             sig = r.get("latest_signal", {})
-            pos = "做多 (Long)" if sig.get("position") == "long" else "觀望 (Wait)"
+            pos_value = sig.get("position", "cash")
+            pos = "做多 (Long)" if pos_value == "long" else "觀望 (Wait)"
             close_price = sig.get("close", "")
             entry_ref = sig.get("entry_ref", "-")
             exit_ref = sig.get("exit_ref", "-")
             
-            if pos == "做多 (Long)":
+            if pos_value == "long":
                 ref_str = f"出場建議價：{exit_ref}"
             else:
                 ref_str = f"進場建議價：{entry_ref}"

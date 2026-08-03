@@ -2,6 +2,7 @@ import sqlite3
 import pandas as pd
 import os
 import json
+import logging
 from typing import Optional
 
 DB_PATH = "data/market_data.db"
@@ -13,7 +14,6 @@ def get_connection() -> sqlite3.Connection:
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA busy_timeout=10000")
     except sqlite3.Error as e:
-        import logging
         logging.getLogger(__name__).warning(f"Failed to set SQLite PRAGMAs: {e}")
     return conn
 
@@ -80,7 +80,8 @@ def save_supertrend_ai_params(
     sharpe_ratio: float = None,
     calmar_ratio: float = None,
     win_rate: float = None,
-    profit_factor: float = None
+    profit_factor: float = None,
+    export_json: bool = True
 ):
     init_supertrend_ai_db()
     with get_connection() as conn:
@@ -122,14 +123,22 @@ def save_supertrend_ai_params(
             float(profit_factor) if profit_factor is not None else None
         ))
         conn.commit()
-    export_supertrend_ai_params_to_json()
+    if export_json:
+        export_supertrend_ai_params_to_json()
 
 def export_supertrend_ai_params_to_json(json_path: str = "data/optimized_params_ai.json"):
     """將 strategy_params_supertrend_ai 資料表中的所有優化參數匯出為 JSON 檔案"""
     with get_connection() as conn:
         try:
             cursor = conn.cursor()
-            cursor.execute("SELECT * FROM strategy_params_supertrend_ai ORDER BY ticker, start_date, end_date")
+            cursor.execute("""
+                SELECT ticker, start_date, end_date, atr_length, factor_min, factor_max,
+                       factor_step, perf_alpha, from_cluster, update_freq, long_only,
+                       custom_score, cagr, max_drawdown, sharpe_ratio, calmar_ratio,
+                       win_rate, profit_factor
+                FROM strategy_params_supertrend_ai
+                ORDER BY ticker, start_date, end_date
+            """)
             rows = cursor.fetchall()
             columns = [description[0] for description in cursor.description]
             
@@ -146,7 +155,6 @@ def export_supertrend_ai_params_to_json(json_path: str = "data/optimized_params_
                 json.dump(params_list, f, indent=2, ensure_ascii=False)
             os.replace(tmp_json, json_path)
         except Exception as e:
-            import logging
             logging.getLogger(__name__).error(f"匯出 AI 參數至 JSON 失敗: {e}")
 
 def query_supertrend_ai_params(ticker: str) -> pd.DataFrame:

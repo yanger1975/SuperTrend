@@ -55,7 +55,11 @@ def run_supertrend_ai_backtest(df: pd.DataFrame,
     
     # 3. 執行回測
     engine = BacktestEngine(df_ind)
-    execution_mode = "next_close" if asset_type == "fund" else "next_open"
+    valid_asset_types = {"stock", "fund"}
+    asset_type_normalized = asset_type.lower() if asset_type else "stock"
+    if asset_type_normalized not in valid_asset_types:
+        raise ValueError(f"Invalid asset_type: '{asset_type}'. Expected one of: {sorted(valid_asset_types)}")
+    execution_mode = "next_close" if asset_type_normalized == "fund" else "next_open"
     trades, equity, benchmark = engine.run(
         long_only=long_only,
         stop_loss_pct=stop_loss_pct,

@@ -197,6 +197,8 @@ class BacktestEngine:
                     active_trade.is_closed = True
                     trades.append(active_trade)
                     shares, position, active_trade = 0.0, 0, None
+                    equity.iloc[i] = cash
+                    continue
 
             # ======= Phase 3: CLOSE =======
             if execution_mode in ["next_close", "current_close"]:
