@@ -44,6 +44,8 @@ def init_supertrend_ai_db():
                 calmar_ratio REAL,
                 win_rate REAL,
                 profit_factor REAL,
+                update_freq INTEGER DEFAULT 1,
+                long_only INTEGER DEFAULT 1,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (ticker, start_date, end_date)
@@ -54,10 +56,16 @@ def init_supertrend_ai_db():
         cursor.execute("PRAGMA table_info(strategy_params_supertrend_ai)")
         columns = [row[1] for row in cursor.fetchall()]
         if "update_freq" not in columns:
-            cursor.execute("ALTER TABLE strategy_params_supertrend_ai ADD COLUMN update_freq INTEGER DEFAULT 1")
+            try:
+                cursor.execute("ALTER TABLE strategy_params_supertrend_ai ADD COLUMN update_freq INTEGER DEFAULT 1")
+            except sqlite3.OperationalError:
+                pass
             
         if "long_only" not in columns:
-            cursor.execute("ALTER TABLE strategy_params_supertrend_ai ADD COLUMN long_only INTEGER DEFAULT 1")
+            try:
+                cursor.execute("ALTER TABLE strategy_params_supertrend_ai ADD COLUMN long_only INTEGER DEFAULT 1")
+            except sqlite3.OperationalError:
+                pass
 
         conn.commit()
     _initialized = True
