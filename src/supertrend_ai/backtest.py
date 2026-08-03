@@ -17,7 +17,8 @@ def run_supertrend_ai_backtest(df: pd.DataFrame,
                               take_profit_pct: float = 0.0,
                               commission_bps: float = 0.0,
                               slippage_bps: float = 0.0,
-                              show_progress: bool = False) -> Tuple[List[Trade], pd.Series, pd.Series, pd.DataFrame, Dict[str, Any]]:
+                              show_progress: bool = False,
+                              asset_type: str = "stock") -> Tuple[List[Trade], pd.Series, pd.Series, pd.DataFrame, Dict[str, Any]]:
     """
     執行 SuperTrend AI 策略回測，返回交易紀錄、資金曲線、基準曲線、加上指標的 DataFrame 與績效指標。
     """
@@ -54,12 +55,14 @@ def run_supertrend_ai_backtest(df: pd.DataFrame,
     
     # 3. 執行回測
     engine = BacktestEngine(df_ind)
+    execution_mode = "next_close" if asset_type == "fund" else "next_open"
     trades, equity, benchmark = engine.run(
         long_only=long_only,
         stop_loss_pct=stop_loss_pct,
         take_profit_pct=take_profit_pct,
         commission_bps=commission_bps,
-        slippage_bps=slippage_bps
+        slippage_bps=slippage_bps,
+        execution_mode=execution_mode
     )
     
     # 4. 計算績效指標

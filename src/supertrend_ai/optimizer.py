@@ -18,7 +18,8 @@ def optimize_supertrend_ai(
     clusters: List[str] = None,
     update_freqs: List[int] = None,
     long_onlys: List[bool] = None,
-    target_metric: str = "Custom Score"
+    target_metric: str = "Custom Score",
+    asset_type: str = "stock"
 ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
     """
     執行 SuperTrend AI 的參數網格掃描，並將最佳結果寫入資料庫。
@@ -71,6 +72,7 @@ def optimize_supertrend_ai(
             from_cluster=cluster,
             update_freq=freq,
             long_only=lo,
+            asset_type=asset_type,
             show_progress=False # Disable inner progress bar during optimization to avoid clutter
         )
                             

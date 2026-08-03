@@ -1,0 +1,78 @@
+name: Daily SuperTrend AI Signal Scanner & Telegram Notifier
+
+on:
+  schedule:
+    # 1. 週一至週五美股收盤後 30 分鐘 (UTC 21:30，對應美東標準時間 16:30，夏令時間為 17:30)
+    #    由於 GitHub Action 時間不完全精準，可以設定在 UTC 21:30。
+    #    進行每日歷史數據更新與訊號掃描
+    - cron: '30 21 * * 1-5'
+
+    # 2. 固定週六 (UTC 21:30，對應台北時間週日早上 05:30 左右)
+    #    觸發全標的重新進行網格參數優化
+    - cron: '30 21 * * 6'
+  workflow_dispatch: # 支援在 GitHub 網頁上手動點擊執行測試
+
+concurrency:
+  group: daily-supertrend-ai-signals-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scan-and-notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60  # AI 優化可能需要較長時間，將 timeout 延長到 60 分鐘
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Determine if Force Reoptimize is Needed
+        id: check_schedule
+        run: |
+          # 取得目前為星期幾 (6 代表週六)
+          DAY_OF_WEEK=$(date +%u)
+          if [ "$DAY_OF_WEEK" -eq 6 ]; then
+            echo "REOPTIMIZE_FLAG=--force" >> $GITHUB_ENV
+            echo "Today is Saturday, enabling force re-optimization."
+          else
+            echo "REOPTIMIZE_FLAG=" >> $GITHUB_ENV
+            echo "Regular weekday run."
+          fi
+
+      - name: Run SuperTrend AI Batch Optimization & Send Telegram Notification
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python run_batch_optimization_supertrend_ai.py $REOPTIMIZE_FLAG --telegram
+
+      - name: Commit and Push Updated Parameters
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          # 檢查 JSON 檔案是否被建立或修改
+          if [ -f data/optimized_params_ai.json ]; then
+            git add data/optimized_params_ai.json
+            if ! git diff --staged --quiet; then
+              git commit -m "auto: update optimized_params_ai.json [skip ci]"
+              git push
+            else
+              echo "No changes to commit."
+            fi
+          else
+            echo "data/optimized_params_ai.json not found."
+          fi

@@ -113,6 +113,42 @@ class TelegramNotifier:
 
         return chunks
 
+    def split_blocks(self, blocks: List[str], separator: str = "\n\n", max_length: int = 3500) -> List[str]:
+        """
+        將多個獨立的區塊（例如每一檔股票的完整資訊）結合成訊息清單，
+        確保單一區塊不會被從中間截斷。
+        """
+        chunks = []
+        current_chunk = []
+        current_len = 0
+
+        for block in blocks:
+            block_len = len(block) + len(separator)
+            
+            # 處理極端情況：單一區塊超過 max_length，則強制用 split_message 切割該區塊
+            if len(block) > max_length:
+                if current_chunk:
+                    chunks.append(separator.join(current_chunk))
+                    current_chunk = []
+                    current_len = 0
+                
+                sub_chunks = self.split_message(block, max_length)
+                chunks.extend(sub_chunks)
+                continue
+
+            if current_len + block_len > max_length and current_chunk:
+                chunks.append(separator.join(current_chunk))
+                current_chunk = [block]
+                current_len = len(block) + len(separator)
+            else:
+                current_chunk.append(block)
+                current_len += block_len
+
+        if current_chunk:
+            chunks.append(separator.join(current_chunk))
+
+        return chunks
+
     def send_message(
         self,
         text: str,

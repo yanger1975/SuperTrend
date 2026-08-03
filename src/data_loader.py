@@ -33,7 +33,7 @@ class DataLoader:
         df.index = pd.to_datetime(df.index)
         df = df.sort_index()
 
-        # 4. 價格區間合法性檢查 (僅針對正常股票/ETF，若 High/Low/Open 均為 0 則視為基金淨值保持原狀)
+        # 4. 價格區間合法性檢查
         is_fund = (df["Open"] == 0) & (df["High"] == 0) & (df["Low"] == 0)
         stock_mask = ~is_fund
         if stock_mask.any():
@@ -41,6 +41,11 @@ class DataLoader:
             min_limit = df.loc[stock_mask, ["Open", "Close"]].min(axis=1)
             df.loc[stock_mask, "High"] = np.maximum(df.loc[stock_mask, "High"], max_limit)
             df.loc[stock_mask, "Low"] = np.minimum(df.loc[stock_mask, "Low"], min_limit)
+            
+        if is_fund.any():
+            df.loc[is_fund, "Open"] = df.loc[is_fund, "Close"]
+            df.loc[is_fund, "High"] = df.loc[is_fund, "Close"]
+            df.loc[is_fund, "Low"] = df.loc[is_fund, "Close"]
 
         return df
 
@@ -52,7 +57,8 @@ class DataLoader:
         from src.scrapers.ezmoney_scraper import EzMoneyScraper
         ez_scraper = EzMoneyScraper(self.storage.db_path)
         if ticker.endswith(".EZ") or ticker.endswith(".ez") or ticker in ez_scraper.mapping:
-            return ez_scraper.fetch_fund_nav(ticker, start_date, end_date, refresh=refresh)
+            fund_df = ez_scraper.fetch_fund_nav(ticker, start_date, end_date, refresh=refresh)
+            return self.validate_and_clean_data(fund_df)
 
 
         # 統一處理為 UTC naive 時間以便於比對
@@ -92,7 +98,7 @@ class DataLoader:
                 # 對於日線，如果本地最舊日期小於等於請求最舊，且最新日期大於等於請求最新（考慮到週末，放寬 3 天）
                 day_slack = pd.Timedelta(days=3)
                 if local_start <= (start_dt + day_slack) and local_end >= (end_dt - day_slack):
-                    return local_df
+                    return self.validate_and_clean_data(local_df)
 
         # 下載資料 (注意: yfinance 的 end 參數為 exclusive，需 +1 天以涵蓋 end_date 當日)
         yf_end_date = (end_dt + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
@@ -111,4 +117,5 @@ class DataLoader:
         self.storage.upsert_prices(cleaned_df, ticker, interval)
 
         # 存入後再次從資料庫查詢以確保時區和格式的完全對齊
-        return self.storage.query_prices(ticker, interval, start_date, end_date)
+        final_df = self.storage.query_prices(ticker, interval, start_date, end_date)
+        return self.validate_and_clean_data(final_df)

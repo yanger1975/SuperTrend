@@ -1,6 +1,7 @@
 import sqlite3
 import pandas as pd
 import os
+import json
 from typing import Optional
 
 DB_PATH = "data/market_data.db"
@@ -84,6 +85,7 @@ def save_supertrend_ai_params(
     init_supertrend_ai_db()
     with get_connection() as conn:
         cursor = conn.cursor()
+        cursor.execute("DELETE FROM strategy_params_supertrend_ai WHERE ticker = ?", (ticker,))
         cursor.execute("""
             INSERT INTO strategy_params_supertrend_ai (
                 ticker, start_date, end_date, atr_length, factor_min,
@@ -120,6 +122,32 @@ def save_supertrend_ai_params(
             float(profit_factor) if profit_factor is not None else None
         ))
         conn.commit()
+    export_supertrend_ai_params_to_json()
+
+def export_supertrend_ai_params_to_json(json_path: str = "data/optimized_params_ai.json"):
+    """將 strategy_params_supertrend_ai 資料表中的所有優化參數匯出為 JSON 檔案"""
+    with get_connection() as conn:
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM strategy_params_supertrend_ai ORDER BY ticker, start_date, end_date")
+            rows = cursor.fetchall()
+            columns = [description[0] for description in cursor.description]
+            
+            params_list = []
+            for row in rows:
+                params_dict = dict(zip(columns, row))
+                if 'long_only' in params_dict:
+                    params_dict['long_only'] = bool(params_dict['long_only'])
+                params_list.append(params_dict)
+                
+            os.makedirs(os.path.dirname(json_path), exist_ok=True)
+            tmp_json = json_path + ".tmp"
+            with open(tmp_json, "w", encoding="utf-8") as f:
+                json.dump(params_list, f, indent=2, ensure_ascii=False)
+            os.replace(tmp_json, json_path)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"匯出 AI 參數至 JSON 失敗: {e}")
 
 def query_supertrend_ai_params(ticker: str) -> pd.DataFrame:
     init_supertrend_ai_db()

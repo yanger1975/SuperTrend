@@ -8,6 +8,7 @@ from datetime import datetime
 from src.supertrend_ai.optimizer import optimize_supertrend_ai
 from src.supertrend_ai.reporter import generate_supertrend_ai_report
 from src.supertrend_ai.backtest import run_supertrend_ai_backtest
+from src.data_loader import DataLoader
 
 def main():
     parser = argparse.ArgumentParser(description="執行 SuperTrend AI 策略優化與回測")
@@ -19,21 +20,26 @@ def main():
     args = parser.parse_args()
     
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 開始下載資料: {args.ticker} ({args.start} ~ {args.end})")
-    df = yf.download(args.ticker, start=args.start, end=args.end)
-    
-    # 處理 yfinance 可能回傳的多重索引
-    import importlib
-    if "pandas" in sys.modules and isinstance(df.columns, pd.MultiIndex):
-        df.columns = [c[0] for c in df.columns]
+    loader = DataLoader()
+    try:
+        df = loader.fetch_data(args.ticker, start_date=args.start, end_date=args.end)
+    except Exception as e:
+        print(f"下載失敗: {e}")
+        df = pd.DataFrame()
         
-    df.index = pd.to_datetime(df.index)
-    df.dropna(inplace=True)
+    if not df.empty:
+        df.index = pd.to_datetime(df.index)
+        df.dropna(inplace=True)
     
     if df.empty:
         print("資料下載失敗或為空，請檢查代號或日期範圍。")
         return
         
-    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 開始執行參數優化...")
+    # 判斷是否為基金
+    is_fund = args.ticker.endswith(".EZ") or args.ticker.endswith(".ez")
+    asset_type = "fund" if is_fund else "stock"
+        
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 開始執行參數優化 (Asset Type: {asset_type})...")
     res_df, best_params = optimize_supertrend_ai(
         df=df,
         ticker=args.ticker,
@@ -46,7 +52,8 @@ def main():
         perf_alphas=[5, 10.0, 20],
         clusters=['Best', 'Average'],
         update_freqs=[1],
-        long_onlys=[True]
+        long_onlys=[True],
+        asset_type=asset_type
     )
     
     print("\n最佳參數組合:")
@@ -64,7 +71,8 @@ def main():
         from_cluster=best_params['from_cluster'],
         update_freq=best_params['update_freq'],
         long_only=best_params.get('long_only', True),
-        show_progress=True
+        show_progress=True,
+        asset_type=asset_type
     )
     
     # 建立目錄
@@ -89,6 +97,22 @@ def main():
         f.write(md_report)
         
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 回測完成！報告已儲存至: {report_path}")
+    
+    # 輸出目前狀態與建議
+    print("\n================== 當前狀態建議 ==================")
+    last_row = df_ind.iloc[-1]
+    current_price = last_row['Close']
+    trend_dir = last_row['Trend']
+    st_line = last_row['SuperTrend_AI']
+    
+    print(f"最新收盤價 ({last_row.name.strftime('%Y-%m-%d')}): {current_price:.2f}")
+    if trend_dir == 1:
+        print(f"目前狀態: 【多單持有中】")
+        print(f"建議防守(止損)點位: {st_line:.2f}")
+    else:
+        print(f"目前狀態: 【空手觀望】")
+        print(f"建議突破(開倉)點位: {st_line:.2f}")
+    print("==================================================\n")
 
 if __name__ == "__main__":
     main()
