@@ -32,7 +32,7 @@ if hasattr(sys.stdout, "reconfigure"):
 from src.supertrend_ai.optimizer import optimize_supertrend_ai
 from src.supertrend_ai.backtest import run_supertrend_ai_backtest
 from src.supertrend_ai.reporter import generate_supertrend_ai_report
-from src.supertrend_ai.db_setup import query_supertrend_ai_params
+from src.supertrend_ai.db_setup import query_supertrend_ai_params, import_supertrend_ai_params_from_json
 from src.data_loader import DataLoader
 from src.telegram_notifier import TelegramNotifier
 from src.scrapers.ezmoney_scraper import EzMoneyScraper
@@ -269,6 +269,10 @@ def main():
     print(f"  輸出目錄: data/{args.date.replace('-', '')}_AI/")
     print(f"  並行數:   {args.workers}")
     print()
+    
+    if not args.force:
+        print("嘗試從 JSON 匯入既有參數到本地資料庫 (若是全新的 CI 環境)...")
+        import_supertrend_ai_params_from_json()
     
     tickers = collect_tickers()
     if not tickers:

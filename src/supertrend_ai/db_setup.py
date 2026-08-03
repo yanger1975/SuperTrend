@@ -165,6 +165,40 @@ def export_supertrend_ai_params_to_json(json_path: str = "data/optimized_params_
         except Exception as e:
             logging.getLogger(__name__).error(f"匯出 AI 參數至 JSON 失敗: {e}")
 
+def import_supertrend_ai_params_from_json(json_path: str = "data/optimized_params_ai.json"):
+    """將 JSON 檔案中的優化參數匯入至 strategy_params_supertrend_ai 資料表"""
+    if not os.path.exists(json_path):
+        return
+        
+    try:
+        with open(json_path, "r", encoding="utf-8") as f:
+            params_list = json.load(f)
+            
+        for p in params_list:
+            save_supertrend_ai_params(
+                ticker=p.get('ticker'),
+                start_date=p.get('start_date'),
+                end_date=p.get('end_date'),
+                atr_length=p.get('atr_length'),
+                factor_min=p.get('factor_min'),
+                factor_max=p.get('factor_max'),
+                factor_step=p.get('factor_step'),
+                perf_alpha=p.get('perf_alpha'),
+                from_cluster=p.get('from_cluster'),
+                update_freq=p.get('update_freq', 1),
+                long_only=p.get('long_only', True),
+                custom_score=p.get('custom_score'),
+                cagr=p.get('cagr'),
+                max_drawdown=p.get('max_drawdown'),
+                sharpe_ratio=p.get('sharpe_ratio'),
+                calmar_ratio=p.get('calmar_ratio'),
+                win_rate=p.get('win_rate'),
+                profit_factor=p.get('profit_factor'),
+                export_json=False
+            )
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"匯入 AI 參數 JSON 失敗: {e}")
+
 def query_supertrend_ai_params(ticker: str) -> pd.DataFrame:
     init_supertrend_ai_db()
     with get_connection() as conn:
