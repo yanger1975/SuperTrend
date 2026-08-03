@@ -160,6 +160,26 @@
     "profit_factor": 3.7353607520196728
   },
   {
+    "ticker": "SPY",
+    "start_date": "2021-08-03",
+    "end_date": "2026-08-03",
+    "atr_length": 10,
+    "factor_min": 2.0,
+    "factor_max": 4.0,
+    "factor_step": 0.5,
+    "perf_alpha": 20.0,
+    "from_cluster": "Average",
+    "update_freq": 1,
+    "long_only": true,
+    "custom_score": 1.1950154668645754,
+    "cagr": 0.10710171989350736,
+    "max_drawdown": -0.10802887656164921,
+    "sharpe_ratio": 0.8952181148263274,
+    "calmar_ratio": 0.991417510783677,
+    "win_rate": 0.5,
+    "profit_factor": 3.277202621458857
+  },
+  {
     "ticker": "VNQ",
     "start_date": "2021-08-03",
     "end_date": "2026-08-03",
