@@ -347,16 +347,8 @@ def build_telegram_ai_report(results: list, args, is_saturday: bool) -> list:
     """產出 Telegram 格式的報告區塊，回傳 List[str] 給 TelegramNotifier 切分。"""
     ez_scraper = EzMoneyScraper()
     
-    blocks = []
-    latest_date = args.date
-    if results and results[0].get("latest_signal"):
-        latest_date = results[0]["latest_signal"]["date"]
-
-    if is_saturday:
-        blocks.append(f"📅 計算日期：{latest_date} (優化報告)")
-    else:
-        blocks.append(f"📅 計算日期：{latest_date}")
-
+    # 1. 預處理 results 並加上自訂排序欄位
+    processed_results = []
     for r in results:
         if not r.get("success"):
             continue
@@ -368,6 +360,70 @@ def build_telegram_ai_report(results: list, args, is_saturday: bool) -> list:
         if is_fund:
             _, fund_name, _ = ez_scraper.resolve_symbol(ticker)
             display_name = fund_name if fund_name != "未知基金" else ticker
+
+        sig = r.get("latest_signal", {})
+        pos_value = sig.get("position", "cash")
+        close_price_str = sig.get("close", "0")
+        entry_ref_str = sig.get("entry_ref", "0")
+        exit_ref_str = sig.get("exit_ref", "0")
+        
+        try:
+            close_price = float(close_price_str)
+        except ValueError:
+            close_price = 0.0
+            
+        if pos_value == "long":
+            try:
+                ref_price = float(exit_ref_str)
+            except ValueError:
+                ref_price = 1.0
+        else:
+            try:
+                ref_price = float(entry_ref_str)
+            except ValueError:
+                ref_price = 1.0
+                
+        # 避免除以零
+        if ref_price <= 0:
+            ref_price = 1.0
+            
+        distance_pct = (close_price - ref_price) / ref_price * 100.0
+        
+        processed_results.append({
+            "raw": r,
+            "ticker": ticker,
+            "display_name": display_name,
+            "is_fund": is_fund,
+            "pos_value": pos_value,
+            "distance_pct": distance_pct
+        })
+        
+    # 2. 依照距離百分比由大到小排序
+    processed_results.sort(key=lambda x: x["distance_pct"], reverse=True)
+
+    blocks = []
+    blocks.append("📊 <b>Supertrend AI 指標計算結果</b> 📊")
+    
+    latest_date = args.date
+    if processed_results:
+        sig = processed_results[0]["raw"].get("latest_signal")
+        if sig and sig.get("date"):
+            latest_date = sig["date"]
+
+    if is_saturday:
+        blocks.append(f"📅 計算日期：{latest_date} (優化報告)")
+    else:
+        blocks.append(f"📅 計算日期：{latest_date}")
+
+    for item in processed_results:
+        r = item["raw"]
+        display_name = item["display_name"]
+        is_fund = item["is_fund"]
+        pos_value = item["pos_value"]
+        distance_pct = item["distance_pct"]
+        
+        # 多單與空手的圖示
+        icon = "🟢" if pos_value == "long" else "⚪"
 
         if is_saturday:
             # 週六 (強制優化) 報告格式
@@ -383,29 +439,30 @@ def build_telegram_ai_report(results: list, args, is_saturday: bool) -> list:
             score = opt_params.get("custom_score", 0.0)
             
             block = (
-                f"【{display_name}】| {start_d} ~ {end_d}\n"
-                f"ATR: {atr} | Factor: {f_min}~{f_max} ({f_step}) | Alpha: {alpha} | Cluster: {cluster} | Score: {score:.2f}"
+                f"{icon} 【{display_name}】| {start_d} ~ {end_d}\n"
+                f"ATR: {atr} | Factor: {f_min}~{f_max} ({f_step}) | Alpha: {alpha} | Cluster: {cluster} | Score: {score:.2f}\n"
+                f"距標: {distance_pct:+.2f}%"
             )
             blocks.append(block)
         else:
             # 平日 (一至五) 報告格式
             sig = r.get("latest_signal", {})
-            pos_value = sig.get("position", "cash")
-            pos = "做多 (Long)" if pos_value == "long" else "觀望 (Wait)"
             close_price = sig.get("close", "")
             entry_ref = sig.get("entry_ref", "-")
             exit_ref = sig.get("exit_ref", "-")
             
             if pos_value == "long":
+                pos = "做多 (Long)"
                 ref_str = f"出場建議價：{exit_ref}"
             else:
+                pos = "觀望 (Wait)"
                 ref_str = f"進場建議價：{entry_ref}"
                 
             price_label = "最新淨值" if is_fund else "最新收盤"
             
             block = (
-                f"【{display_name}】\n"
-                f"倉位：{pos}\n"
+                f"{icon} 【{display_name}】\n"
+                f"倉位：{pos} (距標 {distance_pct:+.2f}%)\n"
                 f"{price_label}：{close_price}\n"
                 f"{ref_str}"
             )
