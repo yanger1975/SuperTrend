@@ -146,7 +146,31 @@ python run_daily_scanner.py --force-reoptimize
 | `--dry-run` | `flag` | `False` | 僅在 Console 印出診斷報告內容，不實際呼叫 Telegram API。 |
 | `--db-path` | `str` | `"data/market_data.db"` | SQLite 資料庫檔案路徑。 |
 
-### D. GitHub Actions 自動化雲端部署 (`.github/workflows/`)
+### D. SuperTrend AI 批次優化與雙市場推播 (`run_batch_optimization_supertrend_ai.py`)
+用於批次對美股必備清單 (`data/must_have.json`) 與台股/基金清單 (`data/must_have_tw.json`) 執行 SuperTrend AI 策略優化、回測與狀態追蹤，並自動依市場分流發送兩則獨立的 Telegram 訊息：
+
+```bash
+# 執行批次回測與訊號推播 (自動依美股與台股/基金分流發送兩則 Telegram 訊息)
+python run_batch_optimization_supertrend_ai.py --telegram
+
+# 模擬執行 (Dry Run) 於終端機印出兩大市場報告
+python run_batch_optimization_supertrend_ai.py --dry-run
+
+# 週六強制全市場重新網格尋優
+python run_batch_optimization_supertrend_ai.py --force --telegram
+```
+
+#### 引數清單 (Full Arguments)
+| 引數名稱 | 類型 | 預設值 | 說明 |
+| :--- | :--- | :--- | :--- |
+| `--date` | `str` | 當前日期 (`YYYY-MM-DD`) | 輸出目錄之日期鍵值。 |
+| `--force` | `flag` | `False` | 強制所有標的重新執行 AI 參數網格優化（無視資料庫既有紀錄）。 |
+| `--workers` | `int` | `4` | 平行運算的 ProcessPoolExecutor Worker 核心數量。 |
+| `--tickers` | `list` | `None` | 指定執行的標的清單（例如 `--tickers SPY 0050.TW 33YTW.EZ`）。 |
+| `--telegram` | `flag` | `False` | 執行完畢後發送 Telegram 通知（美股與台股/基金獨立發送）。 |
+| `--dry-run` | `flag` | `False` | 僅在 Console 印出兩大市場之格式化 Telegram 診斷報告。 |
+
+### E. GitHub Actions 自動化雲端部署 (`.github/workflows/`)
 本專案已內建完整的 GitHub Actions 自動化工作流（傳統策略 `.github/workflows/daily_signals.yml` 與 AI 策略 `.github/workflows/daily_supertrend_ai_signals.yml`）。
 - **平日推播**：於美股收盤後（UTC 23:00，台北時間隔日 07:00）自動更新歷史數據、以實際市場交易日為基準計算訊號並推播至 Telegram。
 - **週六全標的優化**：每逢週六（UTC 23:00）自動觸發全標的參數網格重新優化，排程具備防延遲機制，並將更新後的最適參數檔案與最新熱門股票清單（`data/optimized_params.json`、`data/optimized_params_ai.json` 與 `data/most-active.json`）自動 Push 存回 Git 倉庫保存。
@@ -160,6 +184,7 @@ python run_daily_scanner.py --force-reoptimize
 ### A. Markdown 報告檔案
 - **個股報告 (`data/{yyyyMMdd}/{ticker}.md`)**：包含樣本內/外 Top 5 參數、最佳參數、最新市場狀態與交易訊號、完整交易紀錄與 Monte Carlo 評估。
 - **全標的總覽報告 (`data/{yyyyMMdd}/All.md`)**：整合所有標的最新收盤價、HMA、SuperTrend、最適參數、當前持倉 (`long` / `cash`) 與進出場參考點 (`Entry Ref` / `Exit Ref`)，`long` 持倉自動排序於最上方。
+- **AI 全標的總覽報告 (`data/{yyyyMMdd}_AI/All_AI.md`)**：整合 SuperTrend AI 全標的市場狀態與最新多空/觀望訊號總覽表。
 
 ### B. SQLite 資料庫與 JSON 版控
 - `data/market_data.db` (本地快取資料庫):
@@ -169,7 +194,9 @@ python run_daily_scanner.py --force-reoptimize
   - `strategy_params_supertrend_ai`: 儲存 SuperTrend AI 策略的最適參數與績效指標 (主鍵: `ticker, start_date, end_date`)。
   - `stock_signals`: 儲存最新交易日持倉狀態 (1=long, 0=cash)、進出場參考點與 HMA 數值 (主鍵: `ticker, start_date, end_date`)。
 - `data/optimized_params.json`: 輕量化 JSON 格式之最適參數備份檔案，負責跨環境（如 GitHub Actions CI/CD）與 Git 版本控制之參數同步。
-- `data/must_have_tw.json`: 關注之台股與 ETF 清單設定檔（如 `["0050.TW", "00935.TW"]`），供 `DataLoader` 與每日掃描器讀取。
+- `data/optimized_params_ai.json`: SuperTrend AI 專屬之最適學習參數備份檔案。
+- `data/must_have.json`: 關注之美股必備標的清單（`["SPY", "QQQM", "SMH", "GLD", "VNQ", "DIVB", "SPMO"]`）。
+- `data/must_have_tw.json`: 關注之台股 ETF 與國內基金清單設定檔（包含 `["0050.TW", "00935.TW", "33YTW.EZ", "25YTW.EZ", "10YTW.EZ"]`），供 `DataLoader`、每日掃描器與 SuperTrend AI 批次腳本讀取。
 - `data/ezmoney.json`: 存放 EZMoney 統一投信共同基金之中文全名與 API 代號對照檔 (如 `"統一全球新科技基金": "33YTW"`)。標的代碼採用 `.EZ` 後綴做為資料庫鍵值 (如 `33YTW.EZ`)。
 
 

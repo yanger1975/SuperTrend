@@ -58,3 +58,37 @@ def test_db_setup_and_write():
         with get_connection() as conn:
             conn.cursor().execute("DELETE FROM strategy_params_supertrend_ai WHERE ticker = 'TEST'")
             conn.commit()
+
+
+def test_collect_tickers_and_market_split():
+    from run_batch_optimization_supertrend_ai import collect_tickers, build_telegram_ai_report
+    import argparse
+
+    us_tickers, tw_tickers = collect_tickers()
+    assert "SPY" in us_tickers
+    assert "0050.TW" in tw_tickers
+    assert "33YTW.EZ" in tw_tickers
+
+    args = argparse.Namespace(date="2026-10-11")
+    fake_results_us = [{
+        "ticker": "SPY",
+        "success": True,
+        "latest_signal": {"date": "2026-10-09", "close": "778.57", "position": "long", "exit_ref": "745.00"}
+    }]
+    fake_results_tw = [{
+        "ticker": "0050.TW",
+        "success": True,
+        "latest_signal": {"date": "2026-10-08", "close": "114.95", "position": "long", "exit_ref": "111.00"}
+    }]
+
+    us_blocks = build_telegram_ai_report(fake_results_us, args, is_saturday=False, market_type="us")
+    tw_blocks = build_telegram_ai_report(fake_results_tw, args, is_saturday=False, market_type="tw")
+
+    us_text = "\n".join(us_blocks)
+    tw_text = "\n".join(tw_blocks)
+
+    assert "美股市場" in us_text
+    assert "台股與基金" in tw_text
+    assert "SPY" in us_text
+    assert "0050.TW" in tw_text
+

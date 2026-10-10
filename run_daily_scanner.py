@@ -314,13 +314,13 @@ def build_telegram_report(date_str: str, signals: List[Dict[str, Any]]) -> str:
         lines.append("<i>今日無新買入或新賣出訊號。</i>\n")
     else:
         for s in new_buy:
-            curr = "NT$" if s.get("ticker", "").upper().endswith(".TW") else "$"
+            curr = "NT$" if s.get("ticker", "").upper().endswith((".TW", ".EZ")) else "$"
             lines.append(
                 f"🟢 <b>[買入] {fmt_ticker_params(s)}</b> | 收盤: <code>{curr}{s['close']:.2f}</code> | "
                 f"止損點: <code>{curr}{s['supertrend']:.2f}</code>"
             )
         for s in new_sell:
-            curr = "NT$" if s.get("ticker", "").upper().endswith(".TW") else "$"
+            curr = "NT$" if s.get("ticker", "").upper().endswith((".TW", ".EZ")) else "$"
             lines.append(
                 f"🔴 <b>[平倉] {fmt_ticker_params(s)}</b> | 收盤: <code>{curr}{s['close']:.2f}</code> | "
                 f"觸發出場觀望"
@@ -333,7 +333,7 @@ def build_telegram_report(date_str: str, signals: List[Dict[str, Any]]) -> str:
         lines.append("<i>目前無持倉部位。</i>\n")
     else:
         for s in hold_long:
-            curr = "NT$" if s.get("ticker", "").upper().endswith(".TW") else "$"
+            curr = "NT$" if s.get("ticker", "").upper().endswith((".TW", ".EZ")) else "$"
             lines.append(
                 f"• <b>{fmt_ticker_params(s)}</b> | 收盤: <code>{curr}{s['close']:.2f}</code> | "
                 f"出場參考價: <code>{curr}{s['exit_ref']:.2f}</code>"

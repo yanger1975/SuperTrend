@@ -334,6 +334,7 @@
                         <li>**取樣頻率調整 (Downsampling)**：除了 Numba 的底層加速，我們還加入了 `update_freq` 參數。預設為 `1` (每根 K 線皆重新運算)，若在超大資料集下需要提升效能，可將參數調整為 `5` 或 `10`，代表每 5-10 根 K 線才重新聚類一次，在稍微犧牲即時性的情況下取得極致效能。</li>
                         <li>**網格優化與回測報告**：內建 `optimizer.py` 用以掃描最佳學習參數 (例如學習長度與目標群集)，並透過 `reporter.py` 生成包含逐月報酬率矩陣的詳細 Markdown 回測報告。</li>
                         <li>**獨立儲存**：新設 `strategy_params_supertrend_ai` 表格專門儲存此機器學習策略之最適參數 (包含 `update_freq` 欄位)，達成與傳統策略資料互不干擾的擴充架構。</li>
+                        <li>**雙市場獨立 Telegram 訊號推播**：整合 <code>data/must_have.json</code>（美股）與 <code>data/must_have_tw.json</code>（台股與國內基金），自動辨識市場類型並分流發送兩則獨立的 Telegram 診斷訊息（分別呈現美股與台股各自的最新市場交易日與專屬貨幣符號）。</li>
                     </ul>
                 </div>
 
@@ -364,6 +365,11 @@
                     <div class="decision-block">
                         <h4>E. GitHub Actions 收盤延遲排程 (UTC 23:00) 與營業日快取校驗</h4>
                         <p>考量美股收盤後 Yahoo 財經數據處理與封存時間，GitHub Actions 的傳統 SuperTrend 與 SuperTrend AI 自動排程統一設於 UTC 23:00 (台北時間隔日上午 07:00) 觸發，確保數據完全就緒；排程並優先依據 Cron 表達式辨識週六避免隊列延遲跨日；<code>DataLoader</code> 採用營業日覆蓋判定 (<code>pd.bdate_range</code>) 防止週中快取假命中，並自動將 <code>yf.download</code> 之 <code>end</code> 參數設為 <code>end_date + 1 day</code>。</p>
+                    </div>
+
+                    <div class="decision-block">
+                        <h4>F. 跨市場配置統一與雙向 Telegram 推播分流</h4>
+                        <p>全面統一由 <code>data/must_have.json</code>（美股）與 <code>data/must_have_tw.json</code>（台股 ETF 與國內基金）管理關注標的，廢棄多餘的獨立檔案；在批次推播時自動依市場分流發送兩則 Telegram 訊息，精準解決美股與台股休市日不同與貨幣符號混雜問題。</p>
                     </div>
                 </div>
             </div>

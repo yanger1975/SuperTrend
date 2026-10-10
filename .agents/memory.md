@@ -1,7 +1,7 @@
 # SuperTrend 交易系統工作與記憶檔案 (Memory)
 
 > **建立時間**：2026-07-25 (最後更新：2026-10-11)
-> **專案位置**：`d:\MyProj\SuperTrend`  
+> **專案位置**：`d:\MyProj\SuperTrend`
 > **當前狀態**：
 > 1. 左側交易系統 (DCA) 拆分：已成功將所有左側定期定額與低檔加碼模組、CLI 工具、Notebook、HTML 報告及測試完整拆分移轉至獨立專案 `d:\MyProj\ETF_DCA`。
 > 2. SuperTrend 右側順勢系統：回測引擎、指標庫、資料快取、SuperTrend AI 批次最佳化、Telegram 自動化推播、GitHub Actions CI 排程全數正常運作。
@@ -189,4 +189,17 @@ if len(tables) >= 2:
 - **每日掃描與參數最佳化整合**：
   - `run_optimization.py --ticker 0050.TW --start 2024-10-11`：實測 2 年歷史還原資料抓取與 36 組參數網格尋優成功，最佳參數寫入 SQLite 與 `data/optimized_params.json`。
   - `run_daily_scanner.py --dry-run`：自動合併美股與台股，產出標準 Telegram 診斷報告，中文名稱與 `NT$` 貨幣符號正確呈現。
+
+---
+
+## 10. 已完工項目：跨市場配置統一與雙向 Telegram 訊息分流 (Completed Market Split)
+
+- **設定檔精簡與統一**：
+  - 徹底刪除多餘的 `data/supertrend_ai_tickers.json`。
+  - 全面統一由 `data/must_have.json` 管理美股必備標的，以及 `data/must_have_tw.json` 管理台股 ETF 與國內基金（包含 `0050.TW`, `00935.TW`, `33YTW.EZ`, `25YTW.EZ`, `10YTW.EZ`）。
+- **SuperTrend AI 雙市場分流推播 (`run_batch_optimization_supertrend_ai.py`)**：
+  - 自動依據代碼後綴分流為「美股市場」與「台股與基金」兩大群組。
+  - 平行批次優化完成後，獨立依序發送兩則 Telegram 訊息（美股顯示美股交易日與 `$`, 台股顯示台股交易日、`NT$`、中文名稱與基金淨值標記）。
+- **驗證狀態**：全套單元測試擴充至 38 項全數通過 (`38 passed in 36.91s`)。
+
 

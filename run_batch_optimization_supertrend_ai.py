@@ -43,24 +43,60 @@ def validate_ticker(ticker: str) -> bool:
     if not ticker or any(c in ticker for c in [" ", "\t", "\n"]) or len(ticker) > 20: return False
     return True
 
-def collect_tickers() -> list:
-    must_have_path = "data/supertrend_ai_tickers.json"
-    if not os.path.exists(must_have_path):
-        print(f"錯誤: 找不到 {must_have_path}")
-        return []
+def collect_tickers(extra_tickers: list = None) -> tuple:
+    """
+    從 data/must_have.json (美股) 與 data/must_have_tw.json (台股/國內基金) 收集標的。
+    回傳 (us_tickers, tw_tickers)。
+    """
+    must_have_us_path = "data/must_have.json"
+    must_have_tw_path = "data/must_have_tw.json"
 
-    with open(must_have_path, "r", encoding="utf-8") as f:
-        tickers = json.load(f)
+    us_tickers = []
+    if os.path.exists(must_have_us_path):
+        try:
+            with open(must_have_us_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, list):
+                    us_tickers = [t for t in data if validate_ticker(t)]
+        except Exception as e:
+            print(f"載入 must_have.json 失敗: {e}")
+    if not us_tickers:
+        us_tickers = ["SPY", "QQQM", "SMH", "GLD", "VNQ", "DIVB", "SPMO"]
 
-    # 去除重複並保留順序，並進行基本驗證
-    seen = set()
-    unique_tickers = []
-    for t in tickers:
-        if t not in seen and validate_ticker(t):
-            seen.add(t)
-            unique_tickers.append(t)
+    tw_tickers = []
+    if os.path.exists(must_have_tw_path):
+        try:
+            with open(must_have_tw_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, list):
+                    tw_tickers = [t for t in data if validate_ticker(t)]
+        except Exception as e:
+            print(f"載入 must_have_tw.json 失敗: {e}")
+    if not tw_tickers:
+        tw_tickers = ["0050.TW", "00935.TW", "33YTW.EZ", "25YTW.EZ", "10YTW.EZ"]
 
-    return unique_tickers
+    if extra_tickers:
+        for t in extra_tickers:
+            if not validate_ticker(t):
+                continue
+            if t.upper().endswith((".TW", ".EZ")) or t.lower().endswith((".tw", ".ez")):
+                if t not in tw_tickers:
+                    tw_tickers.append(t)
+            else:
+                if t not in us_tickers:
+                    us_tickers.append(t)
+
+    # 去除重複並保留順序
+    def dedupe(lst):
+        seen = set()
+        out = []
+        for item in lst:
+            if item not in seen:
+                seen.add(item)
+                out.append(item)
+        return out
+
+    return dedupe(us_tickers), dedupe(tw_tickers)
 
 def generate_all_summary_report(results: list, args) -> str:
     """產生包含所有標的市場狀態與交易訊號的 All_AI.md 報告。"""
@@ -264,6 +300,7 @@ def main():
     parser.add_argument("--date", type=str, default=None, help="輸出目錄的日期鍵 YYYY-MM-DD (預設: 今天)")
     parser.add_argument("--telegram", action="store_true", help="執行完畢後發送 Telegram 通知")
     parser.add_argument("--dry-run", action="store_true", help="僅印出 Telegram 報告內容，不實際發送")
+    parser.add_argument("--tickers", nargs="+", help="指定執行的標的清單 (例如 SPY 0050.TW 33YTW.EZ)")
 
     args = parser.parse_args()
 
@@ -280,12 +317,13 @@ def main():
         print("嘗試從 JSON 匯入既有參數到本地資料庫 (若是全新的 CI 環境)...")
         import_supertrend_ai_params_from_json()
 
-    tickers = collect_tickers()
+    us_tickers, tw_tickers = collect_tickers(args.tickers)
+    tickers = us_tickers + tw_tickers
     if not tickers:
-        print("錯誤: 沒有可處理的標的。請檢查 data/supertrend_ai_tickers.json")
+        print("錯誤: 沒有可處理的標的。請檢查 data/must_have.json 與 data/must_have_tw.json")
         sys.exit(1)
 
-    print(f"開始並行處理 {len(tickers)} 個標的...")
+    print(f"開始並行處理 {len(tickers)} 個標的 (美股: {len(us_tickers)}, 台股/基金: {len(tw_tickers)})...")
     print("=" * 60)
 
     results = []
@@ -318,30 +356,45 @@ def main():
             f.write(all_md_content)
         print(f"  OK  All Summary -> {all_md_path}")
 
-
     print(f"報告目錄: data/{args.date.replace('-', '')}_AI/")
 
     if args.telegram or args.dry_run:
-        # 當傳入 --force 時，視為「週六強制優化」模式
         is_saturday = args.force
-        blocks = build_telegram_ai_report(results, args, is_saturday)
-
         notifier = TelegramNotifier()
-        chunks = notifier.split_blocks(blocks, max_length=3500)
+
+        # 分流美股與台股/基金結果
+        us_results = [r for r in results if r.get("ticker") in us_tickers]
+        tw_results = [r for r in results if r.get("ticker") in tw_tickers]
+        # 防呆：未明確歸類的標的歸入美股
+        other_results = [r for r in results if r.get("ticker") not in us_tickers and r.get("ticker") not in tw_tickers]
+        if other_results:
+            us_results.extend(other_results)
+
+        market_reports = []
+        if us_results:
+            market_reports.append(("美股市場", build_telegram_ai_report(us_results, args, is_saturday, market_type="us")))
+        if tw_results:
+            market_reports.append(("台股與基金", build_telegram_ai_report(tw_results, args, is_saturday, market_type="tw")))
 
         if args.dry_run:
             print("\n==================== Telegram Report (Dry Run) ====================")
-            for i, chunk in enumerate(chunks, 1):
-                print(f"--- Chunk {i}/{len(chunks)} ---")
-                print(chunk)
+            for market_name, blocks in market_reports:
+                chunks = notifier.split_blocks(blocks, max_length=3500)
+                print(f"\n--- 【{market_name}】共 {len(chunks)} 個訊息分段 ---")
+                for i, chunk in enumerate(chunks, 1):
+                    print(f"--- Chunk {i}/{len(chunks)} ---")
+                    print(chunk)
             print("===================================================================")
         else:
             if notifier.is_configured():
-                print("發送 Telegram 診斷報告中...")
+                print("發送 Telegram 診斷報告中 (依市場獨立發送)...")
                 success_all = True
-                for chunk in chunks:
-                    if not notifier.send_message(chunk):
-                        success_all = False
+                for market_name, blocks in market_reports:
+                    chunks = notifier.split_blocks(blocks, max_length=3500)
+                    print(f"發送【{market_name}】訊息中 ({len(chunks)} 段)...")
+                    for chunk in chunks:
+                        if not notifier.send_message(chunk):
+                            success_all = False
                 if success_all:
                     print("Telegram 診斷報告成功發送！")
                 else:
@@ -349,9 +402,11 @@ def main():
             else:
                 print("未偵測到 Telegram 憑證，無法發送。")
 
-def build_telegram_ai_report(results: list, args, is_saturday: bool) -> list:
+def build_telegram_ai_report(results: list, args, is_saturday: bool, market_type: str = "all") -> list:
     """產出 Telegram 格式的報告區塊，回傳 List[str] 給 TelegramNotifier 切分。"""
     ez_scraper = EzMoneyScraper()
+    from src.storage import SQLiteStorage
+    storage = SQLiteStorage()
 
     # 1. 預處理 results 並加上自訂排序欄位
     processed_results = []
@@ -366,6 +421,13 @@ def build_telegram_ai_report(results: list, args, is_saturday: bool) -> list:
         if is_fund:
             _, fund_name, _ = ez_scraper.resolve_symbol(ticker)
             display_name = fund_name if fund_name != "未知基金" else ticker
+        elif ticker.upper().endswith(".TW"):
+            try:
+                info = storage.get_ticker_info(ticker)
+                tw_name = info.get("name") if info else None
+                display_name = f"{tw_name} ({ticker})" if tw_name else ticker
+            except Exception:
+                display_name = ticker
 
         sig = r.get("latest_signal", {})
         pos_value = sig.get("position", "cash")
@@ -408,7 +470,12 @@ def build_telegram_ai_report(results: list, args, is_saturday: bool) -> list:
     processed_results.sort(key=lambda x: x["distance_pct"], reverse=True)
 
     blocks = []
-    blocks.append("📊 <b>Supertrend AI 指標計算結果</b> 📊")
+    if market_type == "us":
+        blocks.append("📊 <b>Supertrend AI 指標計算結果 (美股市場)</b> 📊")
+    elif market_type == "tw":
+        blocks.append("📊 <b>Supertrend AI 指標計算結果 (台股與基金)</b> 📊")
+    else:
+        blocks.append("📊 <b>Supertrend AI 指標計算結果</b> 📊")
 
     stock_dates = [
         r["raw"]["latest_signal"]["date"]
@@ -434,6 +501,7 @@ def build_telegram_ai_report(results: list, args, is_saturday: bool) -> list:
 
     for item in processed_results:
         r = item["raw"]
+        ticker = item["ticker"]
         display_name = item["display_name"]
         is_fund = item["is_fund"]
         pos_value = item["pos_value"]
@@ -441,6 +509,7 @@ def build_telegram_ai_report(results: list, args, is_saturday: bool) -> list:
 
         # 多單與空手的圖示
         icon = "🟢" if pos_value == "long" else "⚪"
+        curr = "NT$" if (is_fund or ticker.upper().endswith(".TW")) else "$"
 
         if is_saturday:
             # 週六 (強制優化) 報告格式
@@ -470,19 +539,30 @@ def build_telegram_ai_report(results: list, args, is_saturday: bool) -> list:
             sig_date = sig.get("date", "")
             date_note = f" ({sig_date})" if sig_date and sig_date != latest_date else ""
 
+            close_display = f"{curr}{close_price}" if close_price and not str(close_price).startswith(("$", "NT$")) else close_price
+            if exit_ref != "-" and not str(exit_ref).startswith(("$", "NT$")):
+                exit_display = f"{curr}{exit_ref}"
+            else:
+                exit_display = exit_ref
+
+            if entry_ref != "-" and not str(entry_ref).startswith(("$", "NT$")):
+                entry_display = f"{curr}{entry_ref}"
+            else:
+                entry_display = entry_ref
+
             if pos_value == "long":
                 pos = "做多 (Long)"
-                ref_str = f"出場建議價：{exit_ref}"
+                ref_str = f"出場建議價：{exit_display}"
             else:
                 pos = "觀望 (Wait)"
-                ref_str = f"進場建議價：{entry_ref}"
+                ref_str = f"進場建議價：{entry_display}"
 
             price_label = "最新淨值" if is_fund else "最新收盤"
 
             block = (
                 f"{icon} 【{display_name}】{date_note}\n"
                 f"倉位：{pos} (距標 {distance_pct:+.2f}%)\n"
-                f"{price_label}：{close_price}\n"
+                f"{price_label}：{close_display}\n"
                 f"{ref_str}"
             )
             blocks.append(block)
