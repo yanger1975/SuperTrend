@@ -268,9 +268,12 @@ def build_telegram_report(date_str: str, signals: List[Dict[str, Any]]) -> str:
             return f"{s['ticker']} ({st_period}, {st_mult}, {ma_display})"
         return s['ticker']
 
+    market_dates = [s["date"] for s in signals if s.get("date")]
+    display_date = max(market_dates) if market_dates else date_str
+
     lines = []
     lines.append(f"📊 <b>【SuperTrend 每日策略診斷報告】</b>")
-    lines.append(f"📅 <b>日期:</b> {date_str} | 掃描標的: {len(signals)} 支\n")
+    lines.append(f"📅 <b>市場資料日:</b> {display_date} | 掃描標的: {len(signals)} 支\n")
 
     # Section 1: 新訊號觸發
     lines.append("🚨 <b>【本日新觸發動態】</b>")

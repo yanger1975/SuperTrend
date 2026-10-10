@@ -40,11 +40,12 @@ jobs:
       - name: Determine if Force Reoptimize is Needed
         id: check_schedule
         run: |
-          # 取得目前為星期幾 (6 代表週六)
+          # 優先依據觸發排程的 Cron 表達式判斷是否為週六排程，避免 GitHub Actions 隊列延遲跨日誤判
+          CRON_SCHEDULE="${{ github.event.schedule }}"
           DAY_OF_WEEK=$(date +%u)
-          if [ "$DAY_OF_WEEK" -eq 6 ]; then
+          if [[ "$CRON_SCHEDULE" == *"6"* ]] || ([ -z "$CRON_SCHEDULE" ] && [ "$DAY_OF_WEEK" -eq 6 ]); then
             echo "REOPTIMIZE_FLAG=--force-reoptimize" >> $GITHUB_ENV
-            echo "Today is Saturday, enabling force re-optimization."
+            echo "Schedule or Day is Saturday, enabling force re-optimization."
           else
             echo "REOPTIMIZE_FLAG=" >> $GITHUB_ENV
             echo "Regular weekday run."

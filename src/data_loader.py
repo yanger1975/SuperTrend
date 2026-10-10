@@ -41,7 +41,7 @@ class DataLoader:
             min_limit = df.loc[stock_mask, ["Open", "Close"]].min(axis=1)
             df.loc[stock_mask, "High"] = np.maximum(df.loc[stock_mask, "High"], max_limit)
             df.loc[stock_mask, "Low"] = np.minimum(df.loc[stock_mask, "Low"], min_limit)
-            
+
         if is_fund.any():
             df.loc[is_fund, "Open"] = df.loc[is_fund, "Close"]
             df.loc[is_fund, "High"] = df.loc[is_fund, "Close"]
@@ -95,9 +95,16 @@ class DataLoader:
                 local_start = local_df.index[0]
                 local_end = local_df.index[-1]
 
-                # 對於日線，如果本地最舊日期小於等於請求最舊，且最新日期大於等於請求最新（考慮到週末，放寬 3 天）
-                day_slack = pd.Timedelta(days=3)
-                if local_start <= (start_dt + day_slack) and local_end >= (end_dt - day_slack):
+                # 檢查起始日期是否滿足（考慮開頭歷史資料遇週末假期放寬 4 天）
+                start_covered = local_start <= (start_dt + pd.Timedelta(days=4))
+
+                # 結束日期：確保快取資料涵蓋至最新交易日（除了週末之外，不應遺漏任何營業日，防止週中快取假命中）
+                if interval.lower() in ["1h", "60m"]:
+                    end_covered = local_end >= end_dt
+                else:
+                    end_covered = local_end >= end_dt or len(pd.bdate_range(local_end + pd.Timedelta(days=1), end_dt)) == 0
+
+                if start_covered and end_covered:
                     return self.validate_and_clean_data(local_df)
 
         # 下載資料 (注意: yfinance 的 end 參數為 exclusive，需 +1 天以涵蓋 end_date 當日)

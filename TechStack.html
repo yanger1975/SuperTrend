@@ -274,7 +274,7 @@
                     <h3>2. 資料協調載入器 (src/data_loader.py)</h3>
                     <ul>
                         <li>協調儲存層與 `yfinance` / `EzMoneyScraper` API。若本地快取已有資料則直接讀取；當偵測到以 `.EZ` 結尾或於 `data/ezmoney.json` 之基金時，自動調用 `EzMoneyScraper`。</li>
-                        <li>提供防錯校正機制，修復不合邏輯的 K 線價格 (如 High &lt; Close)，並保留共同基金 0 價價格欄位。</li>
+                        <li>提供防錯校正機制，修復不合邏輯的 K 線價格 (如 High &lt; Close)，並針對共同基金淨值資料自動補齊 Open/High/Low 等同於 Close 淨值，確保指標運算與回測流程相容。</li>
                         <li>**1 小時 (1-Hour) 自動截斷與日誌警告：** 當請求 1 小時頻率且指定日期區間超過 730 日時，自動將起始日期限制在 730 日內並發出日誌警告。</li>
                     </ul>
 
@@ -368,8 +368,8 @@
                     </div>
 
                     <div class="decision-block">
-                        <h4>E. GitHub Actions 收盤 2 小時延遲排程與 yfinance 包容性 end 邊界</h4>
-                        <p>考量美股收盤後 Yahoo 財經當地數據處理時間，GitHub Actions 自動排程設於 UTC 23:00 (台北時間隔日上午 07:00) 觸發，確保資料庫已完整準備好；Python 腳本維持直觀的 `datetime.now()` 預設值；`DataLoader` 並自動將 `yf.download` 之 `end` 參數設為 `end_date + 1 day`，解決 yfinance 非包容性 (exclusive) 導致遺失當日 K 線之問題。</p>
+                        <h4>E. GitHub Actions 收盤延遲排程 (UTC 23:00) 與營業日快取校驗</h4>
+                        <p>考量美股收盤後 Yahoo 財經數據處理與封存時間，GitHub Actions 的傳統 SuperTrend 與 SuperTrend AI 自動排程統一設於 UTC 23:00 (台北時間隔日上午 07:00) 觸發，確保數據完全就緒；排程並優先依據 Cron 表達式辨識週六避免隊列延遲跨日；<code>DataLoader</code> 採用營業日覆蓋判定 (<code>pd.bdate_range</code>) 防止週中快取假命中，並自動將 <code>yf.download</code> 之 <code>end</code> 參數設為 <code>end_date + 1 day</code>。</p>
                     </div>
                 </div>
             </div>

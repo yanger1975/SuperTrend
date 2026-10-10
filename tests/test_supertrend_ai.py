@@ -34,21 +34,27 @@ def test_backtest_engine_integration(mock_df):
 
 def test_db_setup_and_write():
     # Write a test record
-    from src.supertrend_ai.db_setup import save_supertrend_ai_params
+    from src.supertrend_ai.db_setup import save_supertrend_ai_params, get_connection
     init_supertrend_ai_db()
-    save_supertrend_ai_params(
-        ticker="TEST",
-        start_date="2023-01-01",
-        end_date="2023-12-31",
-        atr_length=10,
-        factor_min=1.0,
-        factor_max=2.0,
-        factor_step=0.5,
-        perf_alpha=10.0,
-        from_cluster="Best",
-        custom_score=1.23,
-        cagr=0.15
-    )
-    df_db = query_supertrend_ai_params("TEST")
-    assert not df_db.empty
-    assert df_db.iloc[0]['cagr'] == 0.15
+    try:
+        save_supertrend_ai_params(
+            ticker="TEST",
+            start_date="2023-01-01",
+            end_date="2023-12-31",
+            atr_length=10,
+            factor_min=1.0,
+            factor_max=2.0,
+            factor_step=0.5,
+            perf_alpha=10.0,
+            from_cluster="Best",
+            custom_score=1.23,
+            cagr=0.15,
+            export_json=False
+        )
+        df_db = query_supertrend_ai_params("TEST")
+        assert not df_db.empty
+        assert df_db.iloc[0]['cagr'] == 0.15
+    finally:
+        with get_connection() as conn:
+            conn.cursor().execute("DELETE FROM strategy_params_supertrend_ai WHERE ticker = 'TEST'")
+            conn.commit()

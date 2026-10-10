@@ -167,8 +167,10 @@ python run_dca_optimizer.py --symbol 0050.TW
 
 ---
 
-### F. GitHub Actions 自動化雲端部署 (`.github/workflows/daily_signals.yml`)
-本專案已內建完整的 GitHub Actions 自動化工作流。每逢平日美股收盤自動計算訊號並推播至 Telegram；每逢週六自動觸發全標的參數網格重新優化，並將更新後的最適參數檔案與最新熱門股票清單 (`data/optimized_params.json` 與 `data/most-active.json`) 自動 Push 存回 Git 倉庫。
+### F. GitHub Actions 自動化雲端部署 (`.github/workflows/`)
+本專案已內建完整的 GitHub Actions 自動化工作流（傳統策略 `.github/workflows/daily_signals.yml` 與 AI 策略 `.github/workflows/daily_supertrend_ai_signals.yml`）。
+- **平日推播**：於美股收盤後（UTC 23:00，台北時間隔日 07:00）自動更新歷史數據、以實際市場交易日為基準計算訊號並推播至 Telegram。
+- **週六全標的優化**：每逢週六（UTC 23:00）自動觸發全標的參數網格重新優化，排程具備防延遲機制，並將更新後的最適參數檔案與最新熱門股票清單（`data/optimized_params.json`、`data/optimized_params_ai.json` 與 `data/most-active.json`）自動 Push 存回 Git 倉庫保存。
 
 
 ---

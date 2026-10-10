@@ -48,10 +48,10 @@ def collect_tickers() -> list:
     if not os.path.exists(must_have_path):
         print(f"錯誤: 找不到 {must_have_path}")
         return []
-        
+
     with open(must_have_path, "r", encoding="utf-8") as f:
         tickers = json.load(f)
-        
+
     # 去除重複並保留順序，並進行基本驗證
     seen = set()
     unique_tickers = []
@@ -59,7 +59,7 @@ def collect_tickers() -> list:
         if t not in seen and validate_ticker(t):
             seen.add(t)
             unique_tickers.append(t)
-            
+
     return unique_tickers
 
 def generate_all_summary_report(results: list, args) -> str:
@@ -84,8 +84,14 @@ def generate_all_summary_report(results: list, args) -> str:
 
     if args.date is None:
         args.date = datetime.now().strftime("%Y-%m-%d")
-        
-    latest_date = valid_signals[0]["date"] if valid_signals else args.date
+
+    valid_stock_dates = [s["date"] for s in valid_signals if not (s["ticker"].endswith(".EZ") or s["ticker"].endswith(".ez"))]
+    if valid_stock_dates:
+        latest_date = max(valid_stock_dates)
+    elif valid_signals:
+        latest_date = max(s["date"] for s in valid_signals)
+    else:
+        latest_date = args.date
 
     lines = []
     lines.append("# SuperTrend AI 全標的市場狀態與交易訊號總覽")
@@ -112,17 +118,17 @@ def process_ticker(ticker, args):
     try:
         start_date = (datetime.now() - relativedelta(years=5)).strftime("%Y-%m-%d")
         end_date = datetime.now().strftime("%Y-%m-%d")
-        
+
         loader = DataLoader()
         df = loader.fetch_data(ticker, start_date=start_date, end_date=end_date)
-            
+
         if not df.empty:
             df.index = pd.to_datetime(df.index)
             df.dropna(inplace=True)
-        
+
         if df.empty:
             raise ValueError("下載的資料為空")
-            
+
         # 檢查資料庫是否有既有參數
         db_params = None
         if not args.force:
@@ -232,7 +238,7 @@ def process_ticker(ticker, args):
             best_params=used_params,
             report_dir=out_dir
         )
-        
+
         safe_ticker_name = "".join(c for c in ticker if c.isalnum() or c in ".-_")
         out_path = os.path.join(out_dir, f"{safe_ticker_name}_AI.md")
 
@@ -241,7 +247,7 @@ def process_ticker(ticker, args):
         # 統一處理 custom_score 的 key 大小寫
         if "Custom Score" in used_params and "custom_score" not in used_params:
             used_params["custom_score"] = used_params["Custom Score"]
-            
+
         print(f"[{ticker}] 報告已輸出: {out_path} ({position_str})")
         return {"ticker": ticker, "success": True, "path": out_path, "error": None, "latest_signal": latest_signal, "opt_params": used_params}
 
@@ -258,30 +264,30 @@ def main():
     parser.add_argument("--date", type=str, default=None, help="輸出目錄的日期鍵 YYYY-MM-DD (預設: 今天)")
     parser.add_argument("--telegram", action="store_true", help="執行完畢後發送 Telegram 通知")
     parser.add_argument("--dry-run", action="store_true", help="僅印出 Telegram 報告內容，不實際發送")
-    
+
     args = parser.parse_args()
-    
+
     if args.date is None:
         args.date = datetime.now().strftime("%Y-%m-%d")
-        
+
     print(f"SuperTrend AI Batch Optimization Runner")
     print(f"  強制優化: {'是' if args.force else '否 (從資料庫載入既有參數)'}")
     print(f"  輸出目錄: data/{args.date.replace('-', '')}_AI/")
     print(f"  並行數:   {args.workers}")
     print()
-    
+
     if not args.force:
         print("嘗試從 JSON 匯入既有參數到本地資料庫 (若是全新的 CI 環境)...")
         import_supertrend_ai_params_from_json()
-    
+
     tickers = collect_tickers()
     if not tickers:
         print("錯誤: 沒有可處理的標的。請檢查 data/supertrend_ai_tickers.json")
         sys.exit(1)
-        
+
     print(f"開始並行處理 {len(tickers)} 個標的...")
     print("=" * 60)
-    
+
     results = []
     with ProcessPoolExecutor(max_workers=args.workers) as executor:
         futures = {
@@ -290,39 +296,39 @@ def main():
         }
         for future in as_completed(futures):
             results.append(future.result())
-            
+
     print("\n" + "=" * 60)
     print("批次處理完成！")
     print("=" * 60)
-    
+
     success = [r for r in results if r["success"]]
     failed = [r for r in results if not r["success"]]
-    
+
     print(f"總計: {len(results)} 個標的")
     print(f"成功: {len(success)} 個")
     print(f"失敗: {len(failed)} 個")
     if failed:
         for r in failed:
             print(f"  FAIL {r['ticker']} -> {r['error']}")
-            
+
     if success:
         all_md_content = generate_all_summary_report(results, args)
         all_md_path = os.path.join("data", f"{args.date.replace('-', '')}_AI", "All_AI.md")
         with open(all_md_path, "w", encoding="utf-8") as f:
             f.write(all_md_content)
         print(f"  OK  All Summary -> {all_md_path}")
-        
-        
+
+
     print(f"報告目錄: data/{args.date.replace('-', '')}_AI/")
 
     if args.telegram or args.dry_run:
         # 當傳入 --force 時，視為「週六強制優化」模式
         is_saturday = args.force
         blocks = build_telegram_ai_report(results, args, is_saturday)
-        
+
         notifier = TelegramNotifier()
         chunks = notifier.split_blocks(blocks, max_length=3500)
-        
+
         if args.dry_run:
             print("\n==================== Telegram Report (Dry Run) ====================")
             for i, chunk in enumerate(chunks, 1):
@@ -346,16 +352,16 @@ def main():
 def build_telegram_ai_report(results: list, args, is_saturday: bool) -> list:
     """產出 Telegram 格式的報告區塊，回傳 List[str] 給 TelegramNotifier 切分。"""
     ez_scraper = EzMoneyScraper()
-    
+
     # 1. 預處理 results 並加上自訂排序欄位
     processed_results = []
     for r in results:
         if not r.get("success"):
             continue
-            
+
         ticker = r["ticker"]
         is_fund = ticker.endswith(".EZ") or ticker.endswith(".ez")
-        
+
         display_name = ticker
         if is_fund:
             _, fund_name, _ = ez_scraper.resolve_symbol(ticker)
@@ -366,12 +372,12 @@ def build_telegram_ai_report(results: list, args, is_saturday: bool) -> list:
         close_price_str = sig.get("close", "0")
         entry_ref_str = sig.get("entry_ref", "0")
         exit_ref_str = sig.get("exit_ref", "0")
-        
+
         try:
             close_price = float(close_price_str)
         except ValueError:
             close_price = 0.0
-            
+
         if pos_value == "long":
             try:
                 ref_price = float(exit_ref_str)
@@ -382,13 +388,13 @@ def build_telegram_ai_report(results: list, args, is_saturday: bool) -> list:
                 ref_price = float(entry_ref_str)
             except ValueError:
                 ref_price = 1.0
-                
+
         # 避免除以零
         if ref_price <= 0:
             ref_price = 1.0
-            
+
         distance_pct = (close_price - ref_price) / ref_price * 100.0
-        
+
         processed_results.append({
             "raw": r,
             "ticker": ticker,
@@ -397,23 +403,34 @@ def build_telegram_ai_report(results: list, args, is_saturday: bool) -> list:
             "pos_value": pos_value,
             "distance_pct": distance_pct
         })
-        
+
     # 2. 依照距離百分比由大到小排序
     processed_results.sort(key=lambda x: x["distance_pct"], reverse=True)
 
     blocks = []
     blocks.append("📊 <b>Supertrend AI 指標計算結果</b> 📊")
-    
-    latest_date = args.date
-    if processed_results:
-        sig = processed_results[0]["raw"].get("latest_signal")
-        if sig and sig.get("date"):
-            latest_date = sig["date"]
+
+    stock_dates = [
+        r["raw"]["latest_signal"]["date"]
+        for r in processed_results
+        if not r["is_fund"] and r["raw"].get("latest_signal", {}).get("date")
+    ]
+    all_dates = [
+        r["raw"]["latest_signal"]["date"]
+        for r in processed_results
+        if r["raw"].get("latest_signal", {}).get("date")
+    ]
+    if stock_dates:
+        latest_date = max(stock_dates)
+    elif all_dates:
+        latest_date = max(all_dates)
+    else:
+        latest_date = args.date
 
     if is_saturday:
-        blocks.append(f"📅 計算日期：{latest_date} (優化報告)")
+        blocks.append(f"📅 <b>市場資料日</b>：{latest_date} (優化報告)")
     else:
-        blocks.append(f"📅 計算日期：{latest_date}")
+        blocks.append(f"📅 <b>市場資料日</b>：{latest_date}")
 
     for item in processed_results:
         r = item["raw"]
@@ -421,7 +438,7 @@ def build_telegram_ai_report(results: list, args, is_saturday: bool) -> list:
         is_fund = item["is_fund"]
         pos_value = item["pos_value"]
         distance_pct = item["distance_pct"]
-        
+
         # 多單與空手的圖示
         icon = "🟢" if pos_value == "long" else "⚪"
 
@@ -437,7 +454,7 @@ def build_telegram_ai_report(results: list, args, is_saturday: bool) -> list:
             alpha = opt_params.get("perf_alpha", "")
             cluster = opt_params.get("from_cluster", "")
             score = opt_params.get("custom_score", 0.0)
-            
+
             block = (
                 f"{icon} 【{display_name}】| {start_d} ~ {end_d}\n"
                 f"ATR: {atr} | Factor: {f_min}~{f_max} ({f_step}) | Alpha: {alpha} | Cluster: {cluster} | Score: {score:.2f}\n"
@@ -450,18 +467,20 @@ def build_telegram_ai_report(results: list, args, is_saturday: bool) -> list:
             close_price = sig.get("close", "")
             entry_ref = sig.get("entry_ref", "-")
             exit_ref = sig.get("exit_ref", "-")
-            
+            sig_date = sig.get("date", "")
+            date_note = f" ({sig_date})" if sig_date and sig_date != latest_date else ""
+
             if pos_value == "long":
                 pos = "做多 (Long)"
                 ref_str = f"出場建議價：{exit_ref}"
             else:
                 pos = "觀望 (Wait)"
                 ref_str = f"進場建議價：{entry_ref}"
-                
+
             price_label = "最新淨值" if is_fund else "最新收盤"
-            
+
             block = (
-                f"{icon} 【{display_name}】\n"
+                f"{icon} 【{display_name}】{date_note}\n"
                 f"倉位：{pos} (距標 {distance_pct:+.2f}%)\n"
                 f"{price_label}：{close_price}\n"
                 f"{ref_str}"

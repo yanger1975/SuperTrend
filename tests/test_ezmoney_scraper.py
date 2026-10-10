@@ -65,7 +65,7 @@ def test_data_loader_preserves_zero_open_high_low():
 
     cleaned = loader.validate_and_clean_data(raw_df)
     assert not cleaned.empty
-    assert (cleaned["Open"] == 0.0).all()
-    assert (cleaned["High"] == 0.0).all()
-    assert (cleaned["Low"] == 0.0).all()
+    assert (cleaned["Open"] == cleaned["Close"]).all()
+    assert (cleaned["High"] == cleaned["Close"]).all()
+    assert (cleaned["Low"] == cleaned["Close"]).all()
     assert (cleaned["Close"] > 0).all()
