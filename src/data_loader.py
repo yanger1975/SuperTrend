@@ -2,7 +2,10 @@ import pandas as pd
 import numpy as np
 import yfinance as yf
 from src.storage import SQLiteStorage
+import os
+import json
 import logging
+
 
 class DataLoader:
     """
@@ -60,9 +63,19 @@ class DataLoader:
             fund_df = ez_scraper.fetch_fund_nav(ticker, start_date, end_date, refresh=refresh)
             return self.validate_and_clean_data(fund_df)
 
+        # 若為純數字台股代碼，自動補上 .TW 後綴 (例如 0050 -> 0050.TW)
+        if ticker.isdigit() and len(ticker) in [4, 5, 6]:
+            ticker = f"{ticker}.TW"
+
+        # 若為台股標的，預先記錄其標的元數據
+        if ticker.upper().endswith(".TW"):
+            tw_names = {"0050.TW": "元大台灣50", "00935.TW": "野村臺灣新科技50"}
+            name = tw_names.get(ticker.upper(), f"台股_{ticker.upper().replace('.TW', '')}")
+            self.storage.upsert_ticker_info(ticker.upper(), name=name, asset_type="etf", source="yfinance")
 
         # 統一處理為 UTC naive 時間以便於比對
         start_dt = pd.to_datetime(start_date)
+
         end_dt = pd.to_datetime(end_date)
 
 

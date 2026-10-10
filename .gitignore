@@ -21,3 +21,8 @@ temp/
 # 忽略日誌與資料庫檔案
 *.log
 *.db
+
+# 忽略 data 目錄及所有子目錄下的 Markdown 報告
+data/**/*.md
+data/*.md
+

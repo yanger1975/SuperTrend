@@ -45,6 +45,8 @@ def test_get_target_tickers():
     assert "QQQM" in tickers
     assert "AAPL" in tickers
     assert "TSLA" in tickers
+    assert "0050.TW" in tickers
+    assert "00935.TW" in tickers
 
 
 def test_get_best_param_new_ticker(mock_storage, sample_price_df):
@@ -166,6 +168,7 @@ def test_build_telegram_report():
 def test_daily_scanner_main_dry_run(mock_storage, sample_price_df):
     with patch("run_daily_scanner.DataLoader.fetch_data", return_value=sample_price_df):
         with patch("run_daily_scanner.SQLiteStorage", return_value=mock_storage):
-            from run_daily_scanner import main
-            main()
+            with patch("run_daily_scanner.TrendingScraper.fetch_top_tickers", return_value=[]):
+                from run_daily_scanner import main
+                main()
 

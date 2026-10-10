@@ -7,11 +7,12 @@
 ## 1. 系統特點
 
 * **SQLite 本地快取與持久化 (`src/storage.py`, `src/data_loader.py`):**
-  * **價格歷史 (`price_history`)**：自動下載並儲存 `yfinance` 的除權息調整價格資料，具備資料一致性校驗規則，避免異常 K 線（例如 High 小於 Close）干擾回測。
+  * **價格歷史 (`price_history`)**：自動下載並儲存 `yfinance` 的除權息調整價格資料（支援美股與台股如 `0050.TW`、`00935.TW` 之完整還原日 K 線），具備資料一致性校驗規則，避免異常 K 線干擾回測。
+  * **臺灣證券交易所工具模組 (`src/scrapers/twse_scraper.py`)**：支援 TWSE 官方端點數據解析、OpenAPI 盤後快照與中文全名對齊。
   - **最適參數與 JSON 版控 (`supertrend_params` & `data/optimized_params.json`)**：將優化計算出的最佳 SuperTrend / HMA 參數組合及 CAGR、Max Drawdown 等指標儲存至 SQLite，並自動雙向同步至輕量化 `data/optimized_params.json`。在 GitHub Actions 等 CI/CD 無狀態環境中，系統會自動從 JSON 恢復優化參數，避免重複優化運算。
   - **市場狀態與訊號 (`stock_signals`)**：即時儲存標的最新交易日的持倉狀態 (`1=long`, `0=cash`)、進場參考點 (`Entry Ref`)、出場參考點 (`Exit Ref`)、收盤價與 HMA 數值。
 * **多標的自動化批次處理 (`run_batch_optimization.py` & `run_daily_scanner.py`):**
-  * 自動讀取必備清單 (`data/must_have.json`) 並結合 `TrendingScraper` 爬取熱門股票（自動下載與備援更新至 `data/most-active.json`）。
+  * 自動讀取美股必備清單 (`data/must_have.json`)、台股必備清單 (`data/must_have_tw.json`) 並結合 `TrendingScraper` 爬取熱門股票（自動下載與備援更新至 `data/most-active.json`）。
   * 使用多執行緒 (ThreadPoolExecutor) 並行執行多標的參數優化與回測。
   * 自動生成各標的 Markdown 回測報告 (`data/{yyyyMMdd}/{ticker}.md`) 以及全標的總覽報告 [`data/{yyyyMMdd}/All.md`](file:///d:/MyProj/SuperTrend/data/20260722/All.md)。
 * **交易摩擦與跳空模型 (`src/backtest_engine.py`):**
@@ -54,13 +55,17 @@ python -m pytest tests/ -v
 用於對單一股票或 ETF 執行完整網格優化、回測與 console 績效展示，並將結果存入資料庫：
 
 ```bash
+# 美股標的 (例如 SPY)
 python run_optimization.py --ticker SPY --start 2020-01-01
+
+# 台股標的 (例如 0050.TW, 00935.TW，自動從 TWSE 證交所抓取)
+python run_optimization.py --ticker 0050.TW --start 2024-10-11
 ```
 
 #### 引數清單 (Full Arguments)
 | 引數名稱 | 類型 | 預設值 | 說明 |
 | :--- | :--- | :--- | :--- |
-| `--ticker` | `str` | `"SPY"` | 交易標的代碼 (例如 SPY, NVDA, AAPL)。 |
+| `--ticker` | `str` | `"SPY"` | 交易標的代碼 (例如 SPY, NVDA, AAPL，台股後綴為 `.TW` 如 `0050.TW`)。 |
 | `--start` | `str` | `"2020-01-01"` | 歷史資料起始日期 `YYYY-MM-DD`。 |
 | `--end` | `str` | `Today` | 歷史資料結束日期 `YYYY-MM-DD`。 |
 | `--interval` | `str` | `"1d"` | K 線週期，可選擇 `"1d"` (日線), `"1h"` / `"60m"` (小時線)。 |
@@ -164,6 +169,7 @@ python run_daily_scanner.py --force-reoptimize
   - `strategy_params_supertrend_ai`: 儲存 SuperTrend AI 策略的最適參數與績效指標 (主鍵: `ticker, start_date, end_date`)。
   - `stock_signals`: 儲存最新交易日持倉狀態 (1=long, 0=cash)、進出場參考點與 HMA 數值 (主鍵: `ticker, start_date, end_date`)。
 - `data/optimized_params.json`: 輕量化 JSON 格式之最適參數備份檔案，負責跨環境（如 GitHub Actions CI/CD）與 Git 版本控制之參數同步。
+- `data/must_have_tw.json`: 關注之台股與 ETF 清單設定檔（如 `["0050.TW", "00935.TW"]`），供 `DataLoader` 與每日掃描器讀取。
 - `data/ezmoney.json`: 存放 EZMoney 統一投信共同基金之中文全名與 API 代號對照檔 (如 `"統一全球新科技基金": "33YTW"`)。標的代碼採用 `.EZ` 後綴做為資料庫鍵值 (如 `33YTW.EZ`)。
 
 

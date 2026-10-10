@@ -1,10 +1,11 @@
 # SuperTrend 交易系統工作與記憶檔案 (Memory)
 
-> **建立時間**：2026-07-25 (最後更新：2026-10-10)
+> **建立時間**：2026-07-25 (最後更新：2026-10-11)
 > **專案位置**：`d:\MyProj\SuperTrend`  
 > **當前狀態**：
-> 1. 左側交易系統 (DCA) 拆分：已於 2026-10-10 成功將所有左側定期定額與低檔加碼模組、CLI 工具、Notebook、HTML 報告及測試完整拆分移轉至獨立專案 `d:\MyProj\ETF_DCA`。
-> 2. SuperTrend 右側順勢系統：回測引擎、指標庫、資料快取、SuperTrend AI 批次最佳化 (`run_batch_optimization_supertrend_ai.py`)、Telegram 自動化推播、GitHub Actions CI 排程全數正常運作（31 項單元測試全數通過）。
+> 1. 左側交易系統 (DCA) 拆分：已成功將所有左側定期定額與低檔加碼模組、CLI 工具、Notebook、HTML 報告及測試完整拆分移轉至獨立專案 `d:\MyProj\ETF_DCA`。
+> 2. SuperTrend 右側順勢系統：回測引擎、指標庫、資料快取、SuperTrend AI 批次最佳化、Telegram 自動化推播、GitHub Actions CI 排程全數正常運作。
+> 3. 臺灣證券交易所 (TWSE) 台股擴充：已於 2026-10-11 完成 `TwseScraper` 雙端點爬蟲、`data/must_have_tw.json` 清單、SQLite ↔ `data/twse_prices.json` 雙向同步、`DataLoader` 路由分流、`run_optimization.py` 2 年歷史尋優與 `run_daily_scanner.py` 台股/美股整合掃描。
 
 ---
 
@@ -176,11 +177,16 @@ if len(tables) >= 2:
 
 ---
 
-## 8. 下階段可擴充方向 (Future Work & Extensions)
+## 9. 已完工項目：臺灣證券交易所 (TWSE) 台股擴充 (Completed TWSE Taiwan Stock Extension)
 
-### 左側交易系統 (DCA AddOn)
-1. **Walk-Forward Analysis (樣本外驗證)**：
-   - 在 `src/dca_addon/optimizer.py` 中補充 In-Sample (訓練期) 與 Out-of-Sample (測試期) 滾動分割，計算績效衰退率 (Degradation Ratio)。
-2. **反彈條件過濾 (Rebound Filter)**：
-   - 探索在跌幅滿足後，加入「站回 N 日均線」或「RSI 自超賣區回升」才正式觸發扣款的策略變體。
+- **目標標的**：支援 `0050.TW` (元大台灣50)、`00935.TW` (野村臺灣新科技50) 等台股個股與 ETF。
+- **爬蟲實作**：`src/scrapers/twse_scraper.py`
+  - 雙端點架構：`/exchangeReport/STOCK_DAY` 歷史按月補全（維持 3.0 秒安全間隔防阻 HTTP 403/429 封鎖與指數退避重試）與 OpenAPI `/v1/exchangeReport/STOCK_DAY_ALL` 全市場單日秒級快照。
+  - 民國年精確轉換（`113/10/30` -> `2024-10-30`，`1151008` -> `2026-10-08`），除權息標記與千分位逗號清洗。
+  - SQLite ↔ `data/twse_prices.json` 雙向同步機制，使 GitHub Actions 等無狀態環境能秒級恢復台股歷史數據。
+- **設定檔管理**：`data/must_have_tw.json`（已設定 `["0050.TW", "00935.TW"]`）。
+- **DataLoader 自動路由與還原權值**：`src/data_loader.py` 偵測 `.TW` 後綴或 `must_have_tw.json` 時自動透過 `yfinance` (`auto_adjust=True`) 下載除權息還原日 K 線，徹底消除除息日向下跳空引起的假翻空（`TwseScraper` 保留作為 TWSE 官方格式解析與日快照工具）。
+- **每日掃描與參數最佳化整合**：
+  - `run_optimization.py --ticker 0050.TW --start 2024-10-11`：實測 2 年歷史還原資料抓取與 36 組參數網格尋優成功，最佳參數寫入 SQLite 與 `data/optimized_params.json`。
+  - `run_daily_scanner.py --dry-run`：自動合併美股與台股，產出標準 Telegram 診斷報告，中文名稱與 `NT$` 貨幣符號正確呈現。
 

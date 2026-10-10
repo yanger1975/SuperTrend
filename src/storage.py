@@ -135,16 +135,9 @@ class SQLiteStorage:
 
         self._execute_with_retry(init_tables)
 
-        # 若 supertrend_params 為空且 JSON 檔案存在，自動恢復參數
-        conn = self.get_connection()
-        try:
-            cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM supertrend_params")
-            count = cursor.fetchone()[0]
-            if count == 0 and os.path.exists(self.json_path):
-                self.import_params_from_json(self.json_path)
-        finally:
-            conn.close()
+        # 若 JSON 檔案存在，自動從 JSON 恢復與合併最新參數至 supertrend_params
+        if os.path.exists(self.json_path):
+            self.import_params_from_json(self.json_path)
 
     def _safe_float(self, value, default=None):
         """

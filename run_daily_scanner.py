@@ -22,7 +22,7 @@ import sys
 import os
 import logging
 from datetime import datetime, timedelta
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 import pandas as pd
 import numpy as np
 
@@ -65,14 +65,33 @@ def load_must_have_tickers(json_path: str = "data/must_have.json") -> List[str]:
     return ["SPY", "QQQM", "SMH", "GLD", "VNQ"]
 
 
+def load_must_have_tw_tickers(json_path: str = "data/must_have_tw.json") -> List[str]:
+    """從 JSON 檔案載入台股必備標的清單。"""
+    if os.path.exists(json_path):
+        try:
+            with open(json_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, list):
+                    return data
+        except Exception as e:
+            logger.warning(f"載入 must_have_tw.json 失敗: {e}")
+    return ["0050.TW", "00935.TW"]
+
+
 def get_target_tickers(
     extra_tickers: List[str] = None,
     must_have_path: str = "data/must_have.json",
-    fallback_file: str = "data/most-active.json"
+    fallback_file: str = "data/most-active.json",
+    must_have_tw_path: str = "data/must_have_tw.json"
 ) -> List[str]:
-    """收集掃描標的（Must Have + Trending/Most Active + Extra）。"""
+    """收集掃描標的（Must Have + Must Have TW + Trending/Most Active + Extra）。"""
     must_have = load_must_have_tickers(must_have_path)
     tickers = list(must_have)
+
+    must_have_tw = load_must_have_tw_tickers(must_have_tw_path)
+    for t in must_have_tw:
+        if t not in tickers:
+            tickers.append(t)
 
     try:
         scraper = TrendingScraper(fallback_file=fallback_file)
@@ -90,6 +109,7 @@ def get_target_tickers(
                 tickers.append(t_upper)
 
     return tickers
+
 
 
 def get_best_param_for_ticker(
@@ -166,7 +186,8 @@ def get_best_param_for_ticker(
 def process_ticker_signal(
     ticker: str,
     raw_df: pd.DataFrame,
-    param: Dict[str, Any]
+    param: Dict[str, Any],
+    storage: Optional[Any] = None
 ) -> Dict[str, Any]:
     """
     使用最適參數計算當前技術指標與交易訊號。
@@ -234,8 +255,17 @@ def process_ticker_signal(
     entry_ref = st_p if curr_pos == 0 else None
     exit_ref = st_p if curr_pos == 1 else None
 
+    name = None
+    if storage is not None:
+        try:
+            info = storage.get_ticker_info(ticker)
+            name = info.get("name") if info else None
+        except Exception:
+            name = None
+
     return {
         "ticker": ticker,
+        "name": name,
         "date": df_st.index[-1].strftime("%Y-%m-%d"),
         "close": close_p,
         "supertrend": st_p,
@@ -263,10 +293,13 @@ def build_telegram_report(date_str: str, signals: List[Dict[str, Any]]) -> str:
         use_hma = param.get("Use_HMA_Filter", False)
         ma_period = param.get("MA_Period", 0)
 
+        name = s.get("name")
+        display_ticker = f"{name} ({s['ticker']})" if name else s['ticker']
+
         if st_period is not None and st_mult is not None:
             ma_display = ma_period if (use_hma and ma_period > 0) else 0
-            return f"{s['ticker']} ({st_period}, {st_mult}, {ma_display})"
-        return s['ticker']
+            return f"{display_ticker} ({st_period}, {st_mult}, {ma_display})"
+        return display_ticker
 
     market_dates = [s["date"] for s in signals if s.get("date")]
     display_date = max(market_dates) if market_dates else date_str
@@ -281,13 +314,15 @@ def build_telegram_report(date_str: str, signals: List[Dict[str, Any]]) -> str:
         lines.append("<i>今日無新買入或新賣出訊號。</i>\n")
     else:
         for s in new_buy:
+            curr = "NT$" if s.get("ticker", "").upper().endswith(".TW") else "$"
             lines.append(
-                f"🟢 <b>[買入] {fmt_ticker_params(s)}</b> | 收盤: <code>${s['close']:.2f}</code> | "
-                f"止損點: <code>${s['supertrend']:.2f}</code>"
+                f"🟢 <b>[買入] {fmt_ticker_params(s)}</b> | 收盤: <code>{curr}{s['close']:.2f}</code> | "
+                f"止損點: <code>{curr}{s['supertrend']:.2f}</code>"
             )
         for s in new_sell:
+            curr = "NT$" if s.get("ticker", "").upper().endswith(".TW") else "$"
             lines.append(
-                f"🔴 <b>[平倉] {fmt_ticker_params(s)}</b> | 收盤: <code>${s['close']:.2f}</code> | "
+                f"🔴 <b>[平倉] {fmt_ticker_params(s)}</b> | 收盤: <code>{curr}{s['close']:.2f}</code> | "
                 f"觸發出場觀望"
             )
         lines.append("")
@@ -298,11 +333,13 @@ def build_telegram_report(date_str: str, signals: List[Dict[str, Any]]) -> str:
         lines.append("<i>目前無持倉部位。</i>\n")
     else:
         for s in hold_long:
+            curr = "NT$" if s.get("ticker", "").upper().endswith(".TW") else "$"
             lines.append(
-                f"• <b>{fmt_ticker_params(s)}</b> | 收盤: <code>${s['close']:.2f}</code> | "
-                f"出場參考價: <code>${s['exit_ref']:.2f}</code>"
+                f"• <b>{fmt_ticker_params(s)}</b> | 收盤: <code>{curr}{s['close']:.2f}</code> | "
+                f"出場參考價: <code>{curr}{s['exit_ref']:.2f}</code>"
             )
         lines.append("")
+
 
     # Section 3: 觀望標的
     lines.append(f"⚪ <b>【觀望中標的】({len(wait_cash)} 支)</b>")
@@ -349,7 +386,7 @@ def main():
                 force_reoptimize=args.force_reoptimize
             )
 
-            sig = process_ticker_signal(ticker, raw_df, param)
+            sig = process_ticker_signal(ticker, raw_df, param, storage=storage)
             all_signal_results.append(sig)
 
             # 儲存最新訊號至 SQLite stock_signals 表格
