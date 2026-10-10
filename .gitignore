@@ -6,11 +6,16 @@
 config.env
 secret.txt
 
-# 忽略特定資料夾
+# 忽略特定資料夾與 Python 快取
 spec/
 .ipynb_checkpoints/
 .pytest_cache/
 __pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
 temp/
 
 # 忽略日誌與資料庫檔案

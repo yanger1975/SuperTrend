@@ -326,14 +326,7 @@
                         <li>**訊號變動追蹤**：比較前日與當日持倉狀態，精準辨識 `NEW_BUY` (新進場)、`NEW_SELL` (新平倉/止損)、`HOLD_LONG` (持倉中) 與 `WAIT_CASH` (觀望標的) 並發送報告。</li>
                     </ul>
 
-                    <h3>10. ETF 定期定額 + 低檔加碼系統 (src/dca_addon/)</h3>
-                    <ul>
-                        <li>**左側交易與獨立架構 (`src/dca_addon/`)**：與 SuperTrend 順勢交易解耦，包含策略設定 (`config.py`)、回測引擎 (`engine.py`)、左側績效指標 (`metrics.py`)、多線程網格搜尋 (`optimizer.py`) 與 Plotly/HTML 報告生成器 (`visualizer.py`)。</li>
-                        <li>**互動研究環境 (`notebooks/DCA_AddOn_Strategy_Research.ipynb`)**：提供單頁 Plotly 三連動互動圖表（點位散點圖、投入資金 vs 市值、平均持倉成本與水下圖）及熱力圖分析。</li>
-                        <li>**CLI 工具 (`run_dca_backtest.py` & `run_dca_optimizer.py`)**：支援單次回測與批次參數最佳化產出。</li>
-                    </ul>
-
-                    <h3>11. SuperTrend AI 動態尋優模組 (src/supertrend_ai/)</h3>
+                    <h3>10. SuperTrend AI 動態尋優模組 (src/supertrend_ai/)</h3>
                     <ul>
                         <li>**動態因子選擇 (Numba JIT 加速)**：我們採用 Numba `njit` 重寫了 1D KMeans 演算法 (`kmeans.py`) 取代原先的 `scikit-learn`，大幅度解決了逐根 K 線即時運算的效能瓶頸。該模型依據過去歷史績效 (Performance Memory) 進行自動分群 (預設 3 群)，選取最適當下盤勢的動態因子。</li>
                         <li>**詳細參數與調整教學**：AI 版由於具備動態調整與多空支援，參數組合較多（包含 `lengths`, `min_mults`, `max_mults`, `perf_alphas`, `long_onlys` 等），詳細的擴充與調整指南請參閱 <a href="docs/supertrend_ai_parameters.md" target="_blank">SuperTrend AI 參數說明與調整指南</a>。</li>

@@ -141,36 +141,11 @@ python run_daily_scanner.py --force-reoptimize
 | `--dry-run` | `flag` | `False` | 僅在 Console 印出診斷報告內容，不實際呼叫 Telegram API。 |
 | `--db-path` | `str` | `"data/market_data.db"` | SQLite 資料庫檔案路徑。 |
 
-### D. ETF 定期定額 + 低檔加碼策略回測 (`run_dca_backtest.py`)
-針對左側交易（定期定額扣款與低檔加碼）進行單次回測並產出互動式 HTML 綜合報告：
-
-```bash
-python run_dca_backtest.py --symbol 0050.TW --amount 10000 --budget 500000 --output dca_report.html
-```
-
-#### 引數清單 (Full Arguments)
-| 引數名稱 | 類型 | 預設值 | 說明 |
-| :--- | :--- | :--- | :--- |
-| `--symbol` | `str` | `"0050.TW"` | 交易標的代碼 (例如 0050.TW, 006208.TW, SPY)。 |
-| `--amount` | `float` | `10000.0` | 每期定期定額基礎扣款金額。 |
-| `--budget` | `float` | `500000.0` | 額外加碼總預算上限。 |
-| `--output` | `str` | `"dca_backtest_report.html"` | 輸出的單頁互動式 HTML 報告路徑。 |
-
----
-
-### E. ETF 低檔加碼網格最佳化 (`run_dca_optimizer.py`)
-針對加碼門檻、比較天數、冷卻期與每月次數限制進行參數網格搜尋：
-
-```bash
-python run_dca_optimizer.py --symbol 0050.TW
-```
-
----
-
-### F. GitHub Actions 自動化雲端部署 (`.github/workflows/`)
+### D. GitHub Actions 自動化雲端部署 (`.github/workflows/`)
 本專案已內建完整的 GitHub Actions 自動化工作流（傳統策略 `.github/workflows/daily_signals.yml` 與 AI 策略 `.github/workflows/daily_supertrend_ai_signals.yml`）。
 - **平日推播**：於美股收盤後（UTC 23:00，台北時間隔日 07:00）自動更新歷史數據、以實際市場交易日為基準計算訊號並推播至 Telegram。
 - **週六全標的優化**：每逢週六（UTC 23:00）自動觸發全標的參數網格重新優化，排程具備防延遲機制，並將更新後的最適參數檔案與最新熱門股票清單（`data/optimized_params.json`、`data/optimized_params_ai.json` 與 `data/most-active.json`）自動 Push 存回 Git 倉庫保存。
+
 
 
 ---
