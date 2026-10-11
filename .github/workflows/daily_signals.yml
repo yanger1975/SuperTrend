@@ -25,6 +25,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -67,7 +69,23 @@ jobs:
           git add data/optimized_params.json data/most-active.json
           if ! git diff --staged --quiet; then
             git commit -m "auto: update optimized_params.json and most-active.json [skip ci]"
-            git push
+            # 併發防禦機制：拉取最新遠端 commit 並進行 rebase 重試，避免與其他工作流推送衝突
+            pushed=0
+            for i in {1..5}; do
+              echo "Push attempt $i: Pulling latest changes with rebase..."
+              if git pull --rebase --autostash origin "${{ github.ref_name }}" && git push; then
+                pushed=1
+                echo "Successfully pushed changes to remote!"
+                break
+              fi
+              echo "Push attempt $i failed. Cleaning up rebase state and retrying in 5s..."
+              git rebase --abort 2>/dev/null || true
+              sleep 5
+            done
+            if [ "$pushed" -ne 1 ]; then
+              echo "Failed to push after multiple attempts."
+              exit 1
+            fi
           else
             echo "No changes to commit."
           fi
