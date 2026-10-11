@@ -2,13 +2,13 @@ name: Daily SuperTrend Signal Scanner & Telegram Notifier
 
 on:
   schedule:
-    # 1. 週一至週五美股收盤後 2 小時 (UTC 23:00，對應台北時間隔日早上 07:00)
+    # 1. 美股收盤後 (UTC 00:00，對應台北時間週二至週六早上 08:00，台股開盤前 1 小時)
     #    進行每日歷史數據更新與訊號掃描
-    - cron: '0 23 * * 1-5'
+    - cron: '0 0 * * 2-6'
 
-    # 2. 固定週六 (UTC 23:00 週六，對應台北時間週日早上 07:00)
+    # 2. 固定週末 (UTC 00:00 週日，對應台北時間週日早上 08:00)
     #    觸發全標的重新進行網格參數優化
-    - cron: '0 23 * * 6'
+    - cron: '0 0 * * 0'
   workflow_dispatch: # 支援在 GitHub 網頁上手動點擊執行測試
 
 concurrency:
@@ -42,12 +42,12 @@ jobs:
       - name: Determine if Force Reoptimize is Needed
         id: check_schedule
         run: |
-          # 優先依據觸發排程的 Cron 表達式判斷是否為週六排程，避免 GitHub Actions 隊列延遲跨日誤判
+          # 優先依據觸發排程的 Cron 表達式判斷是否為週末排程，避免 GitHub Actions 隊列延遲跨日誤判
           CRON_SCHEDULE="${{ github.event.schedule }}"
           DAY_OF_WEEK=$(date +%u)
-          if [[ "$CRON_SCHEDULE" == *"6"* ]] || ([ -z "$CRON_SCHEDULE" ] && [ "$DAY_OF_WEEK" -eq 6 ]); then
+          if [[ "$CRON_SCHEDULE" == *" 0"* ]] || [[ "$CRON_SCHEDULE" == *" 6"* ]] || ([ -z "$CRON_SCHEDULE" ] && ([ "$DAY_OF_WEEK" -eq 7 ] || [ "$DAY_OF_WEEK" -eq 6 ])); then
             echo "REOPTIMIZE_FLAG=--force-reoptimize" >> $GITHUB_ENV
-            echo "Schedule or Day is Saturday, enabling force re-optimization."
+            echo "Schedule or Day is weekend, enabling force re-optimization."
           else
             echo "REOPTIMIZE_FLAG=" >> $GITHUB_ENV
             echo "Regular weekday run."

@@ -172,8 +172,9 @@ python run_batch_optimization_supertrend_ai.py --force --telegram
 
 ### E. GitHub Actions 自動化雲端部署 (`.github/workflows/`)
 本專案已內建完整的 GitHub Actions 自動化工作流（傳統策略 `.github/workflows/daily_signals.yml` 與 AI 策略 `.github/workflows/daily_supertrend_ai_signals.yml`）。
-- **平日推播**：於美股收盤後（UTC 23:00，台北時間隔日 07:00）自動更新歷史數據、以實際市場交易日為基準計算訊號並推播至 Telegram。
-- **週六全標的優化**：每逢週六（UTC 23:00）自動觸發全標的參數網格重新優化，排程具備防延遲機制，並將更新後的最適參數檔案與最新熱門股票清單（`data/optimized_params.json`、`data/optimized_params_ai.json` 與 `data/most-active.json`）自動 Push 存回 Git 倉庫保存。
+- **時間錯開排程 (Staggered Scheduling)**：
+  - **AI 策略掃描 (`daily_supertrend_ai_signals.yml`)**：於美股收盤後（UTC 23:00，台北時間隔日 07:00）自動更新數據與訊號推播，每逢週六（UTC 23:00）自動觸發全標的 AI 學習尋優並回寫 Git。
+  - **傳統策略掃描 (`daily_signals.yml`)**：往後推遲 1 小時至 UTC 00:00（台北時間週二至週六 08:00，台股開盤前 1 小時）執行每日掃描，每逢週末（UTC 週日 00:00，台北時間週日 08:00）觸發全標的參數網格重新尋優與熱門清單更新。從時間面上徹底錯開兩大工作流。
 - **併發推送衝突防禦 (Concurrency Defense)**：雙工作流均啟用完整 Git 歷程檢索（`fetch-depth: 0`）與自動 Rebase 重試機制（`git pull --rebase --autostash`，最多重試 5 次），徹底防止多項工作流同時執行或遠端已有新 commit 時所造成的 `[rejected] fetch first` 推送失敗問題。
 
 
