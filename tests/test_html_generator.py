@@ -108,6 +108,13 @@ def test_generate_dashboard_html_content(tmp_path):
     assert "switchTab" in html_text or "data-tab" in html_text
     assert "sortTable" in html_text or "data-sort" in html_text
 
+    # Anti-SEO and privacy assertions
+    assert 'name="robots" content="noindex, nofollow' in html_text
+    robots_path = os.path.join(str(tmp_path), "robots.txt")
+    assert os.path.exists(robots_path)
+    with open(robots_path, "r", encoding="utf-8") as rf:
+        assert "Disallow: /" in rf.read()
+
 
 def test_generate_dashboard_html_xss_protection(tmp_path):
     out_html = str(tmp_path / "xss.html")

@@ -207,6 +207,7 @@ def generate_dashboard_html(
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
     <title>{html.escape(dashboard_title)}</title>
     <style>
         :root {{
@@ -782,6 +783,15 @@ def generate_dashboard_html(
     os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(html_content)
+
+    # 自動建立 robots.txt 防止搜尋引擎爬取
+    try:
+        out_dir = os.path.dirname(os.path.abspath(output_path))
+        robots_file = os.path.join(out_dir, "robots.txt")
+        with open(robots_file, "w", encoding="utf-8") as rf:
+            rf.write("User-agent: *\nDisallow: /\n")
+    except Exception:
+        pass
 
     return output_path
 
