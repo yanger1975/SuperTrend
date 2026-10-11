@@ -21,6 +21,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dateutil.relativedelta import relativedelta
+from typing import Any, Optional, List, Dict
 
 # Ensure stdout supports UTF-8 (e.g. for printing emojis on Windows console)
 if hasattr(sys.stdout, "reconfigure"):
@@ -97,6 +98,108 @@ def collect_tickers(extra_tickers: list = None) -> tuple:
         return out
 
     return dedupe(us_tickers), dedupe(tw_tickers)
+
+
+def export_latest_signals_to_json(results: list, output_path: str = "data/latest_signals_ai.json") -> str:
+    """
+    將最新計算出的訊號結果匯出為結構化的 JSON 檔案供版控與網頁儀表板讀取。
+    支援 results 包含 processed_results 字典清單或 raw 結果字典清單。
+    """
+    output_records = []
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    for item in results:
+        if "raw" in item:
+            r = item.get("raw", {})
+            ticker = item.get("ticker", r.get("ticker", ""))
+            display_name = item.get("display_name", ticker)
+            is_fund = item.get("is_fund", False)
+            pos_value = item.get("pos_value", "cash")
+            distance_pct = item.get("distance_pct", 0.0)
+        else:
+            r = item
+            ticker = r.get("ticker", "")
+            display_name = ticker
+            is_fund = ticker.upper().endswith(".EZ")
+            if is_fund:
+                try:
+                    ez_s = EzMoneyScraper()
+                    _, f_name, _ = ez_s.resolve_symbol(ticker)
+                    if f_name and f_name != "未知基金":
+                        display_name = f_name
+                except Exception:
+                    pass
+            elif ticker.upper().endswith(".TW"):
+                try:
+                    from src.storage import SQLiteStorage
+                    info = SQLiteStorage().get_ticker_info(ticker)
+                    if info and info.get("name"):
+                        display_name = info["name"]
+                except Exception:
+                    pass
+
+            sig = r.get("latest_signal", {})
+            pos_value = sig.get("position", "cash")
+            close_val = sig.get("close", 0.0)
+            entry_ref_val = sig.get("entry_ref", "-")
+            exit_ref_val = sig.get("exit_ref", "-")
+            try:
+                c_p = float(close_val)
+                r_p = float(exit_ref_val) if pos_value == "long" else float(entry_ref_val)
+                distance_pct = (c_p - r_p) / r_p * 100.0 if r_p > 0 else 0.0
+            except (ValueError, TypeError):
+                distance_pct = 0.0
+
+        sig = r.get("latest_signal", {})
+        ticker_upper = ticker.upper()
+        if ticker_upper.endswith(".TW") or ticker_upper.endswith(".EZ"):
+            market = "tw"
+            currency = "NT$"
+        else:
+            market = "us"
+            currency = "$"
+
+        close_val = sig.get("close", 0.0)
+        entry_ref_val = sig.get("entry_ref", "-")
+        exit_ref_val = sig.get("exit_ref", "-")
+        action_val = sig.get("action", "HOLD_LONG" if pos_value == "long" else "WAIT_CASH")
+        date_val = sig.get("date", datetime.now().strftime("%Y-%m-%d"))
+
+        output_records.append({
+            "ticker": ticker,
+            "name": display_name,
+            "market": market,
+            "is_fund": is_fund,
+            "date": date_val,
+            "close": close_val,
+            "currency": currency,
+            "position": pos_value,
+            "entry_ref": entry_ref_val,
+            "exit_ref": exit_ref_val,
+            "distance_pct": round(distance_pct, 2) if isinstance(distance_pct, (int, float)) else 0.0,
+            "action": action_val,
+            "updated_at": now_str
+        })
+
+    os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(output_records, f, indent=2, ensure_ascii=False)
+
+    return output_path
+
+
+def load_latest_signals_from_json(input_path: str = "data/latest_signals_ai.json") -> list:
+    """從 JSON 檔案載入最新訊號清單，若檔案不存在或解析失敗則回傳空清單。"""
+    if not os.path.exists(input_path):
+        return []
+    try:
+        with open(input_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data if isinstance(data, list) else []
+    except Exception as e:
+        print(f"讀取 {input_path} 失敗: {e}")
+        return []
+
 
 def generate_all_summary_report(results: list, args) -> str:
     """產生包含所有標的市場狀態與交易訊號的 All_AI.md 報告。"""
@@ -356,6 +459,21 @@ def main():
             f.write(all_md_content)
         print(f"  OK  All Summary -> {all_md_path}")
 
+        # 匯出最新訊號 JSON
+        signals_json_path = "data/latest_signals_ai.json"
+        export_latest_signals_to_json(results, signals_json_path)
+        print(f"  OK  Latest Signals JSON -> {signals_json_path}")
+
+        # 生成 GitHub Pages 靜態儀表板
+        try:
+            from src.supertrend_ai.html_generator import generate_dashboard_html, load_json_data
+            opt_params = load_json_data("data/optimized_params_ai.json")
+            latest_sigs = load_json_data(signals_json_path)
+            html_out = generate_dashboard_html(signals=latest_sigs, params=opt_params, output_path="public/index.html")
+            print(f"  OK  GitHub Pages Dashboard -> {html_out}")
+        except Exception as e:
+            print(f"  WARN 生成網頁儀表板失敗: {e}")
+
     print(f"報告目錄: data/{args.date.replace('-', '')}_AI/")
 
     if args.telegram or args.dry_run:
@@ -402,7 +520,13 @@ def main():
             else:
                 print("未偵測到 Telegram 憑證，無法發送。")
 
-def build_telegram_ai_report(results: list, args, is_saturday: bool, market_type: str = "all") -> list:
+def build_telegram_ai_report(
+    results: list,
+    args: Any = None,
+    is_saturday: bool = False,
+    market_type: str = "all",
+    dashboard_url: Optional[str] = None
+) -> list:
     """產出 Telegram 格式的報告區塊，回傳 List[str] 給 TelegramNotifier 切分。"""
     ez_scraper = EzMoneyScraper()
     from src.storage import SQLiteStorage
@@ -411,6 +535,10 @@ def build_telegram_ai_report(results: list, args, is_saturday: bool, market_type
     # 1. 預處理 results 並加上自訂排序欄位
     processed_results = []
     for r in results:
+        if "raw" in r and "distance_pct" in r:
+            processed_results.append(r)
+            continue
+
         if not r.get("success"):
             continue
 
@@ -491,8 +619,10 @@ def build_telegram_ai_report(results: list, args, is_saturday: bool, market_type
         latest_date = max(stock_dates)
     elif all_dates:
         latest_date = max(all_dates)
-    else:
+    elif args and hasattr(args, "date") and args.date:
         latest_date = args.date
+    else:
+        latest_date = datetime.now().strftime("%Y-%m-%d")
 
     if is_saturday:
         blocks.append(f"📅 <b>市場資料日</b>：{latest_date} (優化報告)")
@@ -567,7 +697,15 @@ def build_telegram_ai_report(results: list, args, is_saturday: bool, market_type
             )
             blocks.append(block)
 
+    # 若有設定 GitHub Pages 儀表板網址，附加於報告結尾
+    url = dashboard_url or os.environ.get("GITHUB_PAGES_URL")
+    if url:
+        blocks.append(f'🔗 <a href="{url}">查看即時網頁儀表板 (Dashboard)</a>')
+
     return blocks
+
+
+build_telegram_blocks_ai = build_telegram_ai_report
 
 if __name__ == "__main__":
     main()

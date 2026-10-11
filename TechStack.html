@@ -246,17 +246,19 @@
                     <p>本系統採用高度解耦的模組化 Package 設計。核心回測與數學計算完全獨立於執行入口，支援單員測試、Jupyter Notebook 互動分析與 CLI 多標的批次平行運算。系統整合 SQLite 本地資料庫，同時實現歷史 K 線快取、最優參數持久化及最新交易訊號管理。</p>
 
                     <div class="flowchart">
-[CLI / Jupyter 入口] ──(1) 呼叫資料庫／網路──> [data_loader.py]
-  (run_daily_scanner.py)                            │
-  (run_batch_optimization)                   優先檢索/增量快取
-  (run_optimization.py)                             v
-                                           [storage.py] (SQLite DB)
-[optimizer.py] <──(2) 網格優化 & 回測── [price_history / supertrend_params]
-       │                                            ▲
- (3) 產出報告 & 訊號存庫                             │
-       ├─── Telegram 報告 ──> [telegram_notifier.py] ──> Telegram Bot API
-       ├─── Markdown 報告 ──> data/{date}/{ticker}.md / All.md
-       └─── 持久化寫入 ──────> supertrend_params & stock_signals</div>
+[CLI / Jupyter / GitHub Actions] ──(1) 呼叫資料庫／網路──> [data_loader.py]
+  (run_batch_optimization_supertrend_ai.py)                │
+  (run_daily_scanner.py)                            優先檢索/增量快取
+  (run_optimization.py)                                    v
+                                                  [storage.py] (SQLite DB)
+[optimizer.py / supertrend_ai] <──(2) 網格優化 & 回測 ──────┘
+       │
+ (3) 產出報告 & 訊號存庫
+       ├─── Telegram 報告 ──────> [telegram_notifier.py] ──> Telegram Bot API (含 Pages 網址)
+       ├─── Markdown 報告 ──────> data/{date}/{ticker}.md / All.md
+       ├─── JSON 訊號與參數版控 ─> data/latest_signals_ai.json & optimized_params_ai.json
+       ├─── GitHub Pages 儀表板 ─> [src/supertrend_ai/html_generator.py] ──> public/index.html
+       └─── 持久化寫入 ──────────> strategy_params_supertrend_ai & stock_signals</div>
                 </div>
 
                 <div class="card">
@@ -336,6 +338,13 @@
                         <li>**獨立儲存**：新設 `strategy_params_supertrend_ai` 表格專門儲存此機器學習策略之最適參數 (包含 `update_freq` 欄位)，達成與傳統策略資料互不干擾的擴充架構。</li>
                         <li>**雙市場獨立 Telegram 訊號推播**：整合 <code>data/must_have.json</code>（美股）與 <code>data/must_have_tw.json</code>（台股與國內基金），自動辨識市場類型並分流發送兩則獨立的 Telegram 診斷訊息（分別呈現美股與台股各自的最新市場交易日與專屬貨幣符號）。</li>
                     </ul>
+
+                    <h3>12. 靜態儀表板生成引擎 (src/supertrend_ai/html_generator.py)</h3>
+                    <ul>
+                        <li>**自包含純 Python 渲染**：零依賴純 Python 標準庫，自 <code>data/latest_signals_ai.json</code> 與 <code>data/optimized_params_ai.json</code> 直接編譯生成單檔 <code>public/index.html</code>，無需 Node.js / npm 等額外前端建置步驟。</li>
+                        <li>**多維度科技儀表板介面**：深色主題設計，支援美股與台股/基金 Tab 切換、雙核心表格（最新訊號與進出場價格表、最適參數與評分表，明確揭示 Score、Win Rate、CAGR、Max DD 與 Sharpe）、標頭點擊升降冪排序與即時搜尋過濾。</li>
+                        <li>**原生 GitHub Pages 整合**：由 <code>daily_supertrend_ai_signals.yml</code> 自動調用生成並透過 <code>actions/deploy-pages</code> 發布，不污染 Git 主分支歷史。</li>
+                    </ul>
                 </div>
 
 
@@ -370,6 +379,11 @@
                     <div class="decision-block">
                         <h4>F. 跨市場配置統一與雙向 Telegram 推播分流</h4>
                         <p>全面統一由 <code>data/must_have.json</code>（美股）與 <code>data/must_have_tw.json</code>（台股 ETF 與國內基金）管理關注標的，廢棄多餘的獨立檔案；在批次推播時自動依市場分流發送兩則 Telegram 訊息，精準解決美股與台股休市日不同與貨幣符號混雜問題。</p>
+                    </div>
+
+                    <div class="decision-block">
+                        <h4>G. 純 Python 自包含渲染與 GitHub Pages 原生無狀態發布</h4>
+                        <p>捨棄繁瑣的現代前端 Node.js / Vite 建置流程，選擇以純 Python 生成自包含 HTML/CSS/Vanilla JS 檔案。此舉讓 GitHub Actions CI 完全免除額外執行環境安裝，將建置延遲壓縮至毫秒級；並配合 GitHub Pages 原生 Artifact 部署機制，避免在 Git Commit 中沉積大量 HTML 構建產物垃圾歷史。</p>
                     </div>
                 </div>
             </div>

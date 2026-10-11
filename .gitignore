@@ -26,3 +26,7 @@ temp/
 data/**/*.md
 data/*.md
 
+# 忽略靜態網頁建置目錄（由 CI 部署至 GitHub Pages）
+public/
+
+

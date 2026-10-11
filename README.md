@@ -25,6 +25,8 @@
   * 支援設定 Train/Test 比例進行樣本外驗證，並可自定義綜合得分公式，產出參數熱力圖，協助您鎖定穩健參數的「高原區 (Plateau)」。
 * **SuperTrend AI 機器學習動態尋優 (`src/supertrend_ai/`):**
   * 基於 K-Means 演算法 (scikit-learn)，即時依據不同參數組合的歷史表現 (Performance Memory) 進行聚類，動態選取最適 Factor，讓策略擁有自我適應盤勢的能力。
+* **GitHub Pages 靜態儀表板與即時監控 (`src/supertrend_ai/html_generator.py`):**
+  * 專為 SuperTrend AI 打造之自包含靜態儀表板，零額外建置相依性。於 GitHub Actions 每日排程執行完畢後自動渲染 `public/index.html` 並原生發布至 GitHub Pages。在同一網頁中以美股與台股/基金分類呈現最新買賣訊號、進出場參考價、最適學習參數、Score (綜合評分) 與 Win Rate (勝率)，支援深色科技風格、欄位即時排序、關鍵字過濾搜尋與手機 RWD 響應式排版。
 
 ---
 
@@ -170,20 +172,45 @@ python run_batch_optimization_supertrend_ai.py --force --telegram
 | `--telegram` | `flag` | `False` | 執行完畢後發送 Telegram 通知（美股與台股/基金獨立發送）。 |
 | `--dry-run` | `flag` | `False` | 僅在 Console 印出兩大市場之格式化 Telegram 診斷報告。 |
 
-### E. GitHub Actions 自動化雲端部署 (`.github/workflows/`)
+### E. SuperTrend AI 靜態儀表板生成器 (`src/supertrend_ai/html_generator.py`)
+用於將最新交易訊號與最佳化參數編譯為現代科技深色主題之自包含 HTML 儀表板，支援本地生成與預覽：
+
+```bash
+# 讀取預設 JSON 檔案並輸出至 public/index.html
+python -m src.supertrend_ai.html_generator
+
+# 生成後自動於預設瀏覽器開啟預覽
+python -m src.supertrend_ai.html_generator --open
+
+# 指定自訂輸入檔案與輸出路徑
+python -m src.supertrend_ai.html_generator --signals data/latest_signals_ai.json --params data/optimized_params_ai.json --output public/index.html
+```
+
+#### 引數清單 (Full Arguments)
+| 引數名稱 | 類型 | 預設值 | 說明 |
+| :--- | :--- | :--- | :--- |
+| `--signals` | `str` | `"data/latest_signals_ai.json"` | 最新訊號 JSON 檔案路徑。 |
+| `--params` | `str` | `"data/optimized_params_ai.json"` | 最適參數 JSON 檔案路徑。 |
+| `--output` | `str` | `"public/index.html"` | 輸出之自包含 HTML 檔案路徑。 |
+| `--open` | `flag` | `False` | 生成完成後自動使用預設瀏覽器開啟預覽。 |
+
+---
+
+### F. GitHub Actions 自動化雲端部署 (`.github/workflows/`)
 本專案已內建完整的 GitHub Actions 自動化工作流（傳統策略 `.github/workflows/daily_signals.yml` 與 AI 策略 `.github/workflows/daily_supertrend_ai_signals.yml`）。
 - **時間錯開排程 (Staggered Scheduling)**：
   - **AI 策略掃描 (`daily_supertrend_ai_signals.yml`)**：於美股收盤後（UTC 23:00，台北時間隔日 07:00）自動更新數據與訊號推播，每逢週六（UTC 23:00）自動觸發全標的 AI 學習尋優並回寫 Git。
   - **傳統策略掃描 (`daily_signals.yml`)**：往後推遲 1 小時至 UTC 00:00（台北時間週二至週六 08:00，台股開盤前 1 小時）執行每日掃描，每逢週末（UTC 週日 00:00，台北時間週日 08:00）觸發全標的參數網格重新尋優與熱門清單更新。從時間面上徹底錯開兩大工作流。
+- **GitHub Pages 自動構建與部署**：`daily_supertrend_ai_signals.yml` 執行完畢後，自動調用 HTML 渲染器生成 `public/index.html`，並透過 `actions/upload-pages-artifact` 與 `actions/deploy-pages` 原生發布至 GitHub Pages，同時在 Telegram 推播訊息尾部附加即時網頁連結。
+  - *前置設定*：在 GitHub 儲存庫之 `Settings` -> `Pages` -> `Build and deployment` 中，將 `Source` 選擇為 `GitHub Actions` 即可。
 - **併發推送衝突防禦 (Concurrency Defense)**：雙工作流均啟用完整 Git 歷程檢索（`fetch-depth: 0`）與自動 Rebase 重試機制（`git pull --rebase --autostash`，最多重試 5 次），徹底防止多項工作流同時執行或遠端已有新 commit 時所造成的 `[rejected] fetch first` 推送失敗問題。
-
-
 
 ---
 
 ## 5. 預期輸出檔案與資料庫架構 (Expected Outputs)
 
-### A. Markdown 報告檔案
+### A. 報告檔案與靜態網頁
+- **GitHub Pages 靜態儀表板 (`public/index.html`)**：自包含深色科技主題之網頁儀表板，支援美股與台股/基金 Tab 切換、即時搜尋、欄位點擊排序與最新進出場建議價。
 - **個股報告 (`data/{yyyyMMdd}/{ticker}.md`)**：包含樣本內/外 Top 5 參數、最佳參數、最新市場狀態與交易訊號、完整交易紀錄與 Monte Carlo 評估。
 - **全標的總覽報告 (`data/{yyyyMMdd}/All.md`)**：整合所有標的最新收盤價、HMA、SuperTrend、最適參數、當前持倉 (`long` / `cash`) 與進出場參考點 (`Entry Ref` / `Exit Ref`)，`long` 持倉自動排序於最上方。
 - **AI 全標的總覽報告 (`data/{yyyyMMdd}_AI/All_AI.md`)**：整合 SuperTrend AI 全標的市場狀態與最新多空/觀望訊號總覽表。
@@ -197,6 +224,7 @@ python run_batch_optimization_supertrend_ai.py --force --telegram
   - `stock_signals`: 儲存最新交易日持倉狀態 (1=long, 0=cash)、進出場參考點與 HMA 數值 (主鍵: `ticker, start_date, end_date`)。
 - `data/optimized_params.json`: 輕量化 JSON 格式之最適參數備份檔案，負責跨環境（如 GitHub Actions CI/CD）與 Git 版本控制之參數同步。
 - `data/optimized_params_ai.json`: SuperTrend AI 專屬之最適學習參數備份檔案。
+- `data/latest_signals_ai.json`: 結構化最新 SuperTrend AI 交易訊號與進出場參考價備份檔案，納入 Git 版本控制。
 - `data/must_have.json`: 關注之美股必備標的清單（`["SPY", "QQQM", "SMH", "GLD", "VNQ", "DIVB", "SPMO"]`）。
 - `data/must_have_tw.json`: 關注之台股 ETF 與國內基金清單設定檔（包含 `["0050.TW", "00935.TW", "33YTW.EZ", "25YTW.EZ", "10YTW.EZ"]`），供 `DataLoader`、每日掃描器與 SuperTrend AI 批次腳本讀取。
 - `data/ezmoney.json`: 存放 EZMoney 統一投信共同基金之中文全名與 API 代號對照檔 (如 `"統一全球新科技基金": "33YTW"`)。標的代碼採用 `.EZ` 後綴做為資料庫鍵值 (如 `33YTW.EZ`)。

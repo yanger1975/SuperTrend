@@ -21,6 +21,8 @@ jobs:
     timeout-minutes: 60  # AI 優化可能需要較長時間，將 timeout 延長到 60 分鐘
     permissions:
       contents: write
+      pages: write
+      id-token: write
 
     steps:
       - name: Checkout Code
@@ -57,40 +59,52 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GITHUB_PAGES_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
         run: |
           python run_batch_optimization_supertrend_ai.py $REOPTIMIZE_FLAG --telegram
 
-      - name: Commit and Push Updated Parameters
+      - name: Setup Pages
+        if: hashFiles('public/index.html') != ''
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages Artifact
+        if: hashFiles('public/index.html') != ''
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'public/'
+
+      - name: Deploy to GitHub Pages
+        if: hashFiles('public/index.html') != ''
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Commit and Push Updated Parameters & Signals
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           # 檢查 JSON 檔案是否被建立或修改
-          if [ -f data/optimized_params_ai.json ]; then
-            git add data/optimized_params_ai.json
-            if ! git diff --staged --quiet; then
-              git commit -m "auto: update optimized_params_ai.json [skip ci]"
-              # 併發防禦機制：拉取最新遠端 commit 並進行 rebase 重試，避免與其他工作流推送衝突
-              pushed=0
-              for i in {1..5}; do
-                echo "Push attempt $i: Pulling latest changes with rebase..."
-                if git pull --rebase --autostash origin "${{ github.ref_name }}" && git push; then
-                  pushed=1
-                  echo "Successfully pushed changes to remote!"
-                  break
-                fi
-                echo "Push attempt $i failed. Cleaning up rebase state and retrying in 5s..."
-                git rebase --abort 2>/dev/null || true
-                sleep 5
-              done
-              if [ "$pushed" -ne 1 ]; then
-                echo "Failed to push after multiple attempts."
-                exit 1
+          git add data/optimized_params_ai.json data/latest_signals_ai.json 2>/dev/null || true
+          if ! git diff --staged --quiet; then
+            git commit -m "auto: update optimized_params_ai.json & latest_signals_ai.json [skip ci]"
+            # 併發防禦機制：拉取最新遠端 commit 並進行 rebase 重試，避免與其他工作流推送衝突
+            pushed=0
+            for i in {1..5}; do
+              echo "Push attempt $i: Pulling latest changes with rebase..."
+              if git pull --rebase --autostash origin "${{ github.ref_name }}" && git push; then
+                pushed=1
+                echo "Successfully pushed changes to remote!"
+                break
               fi
-            else
-              echo "No changes to commit."
+              echo "Push attempt $i failed. Cleaning up rebase state and retrying in 5s..."
+              git rebase --abort 2>/dev/null || true
+              sleep 5
+            done
+            if [ "$pushed" -ne 1 ]; then
+              echo "Failed to push after multiple attempts."
+              exit 1
             fi
           else
-            echo "data/optimized_params_ai.json not found."
+            echo "No changes to commit."
           fi
