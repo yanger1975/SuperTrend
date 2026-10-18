@@ -73,5 +73,120 @@ def test_hourly_data_limit_730_days():
         if os.path.exists(db_path):
             os.remove(db_path)
 
+def test_get_latest_dividend_date():
+    loader = DataLoader(db_path="test_div_loader.db")
+    try:
+        # 測試 0050.TW 回傳有效日期
+        div_dt = loader.get_latest_dividend_date("0050.TW")
+        assert div_dt is not None
+        assert isinstance(div_dt, pd.Timestamp)
+        assert div_dt >= pd.Timestamp("2024-01-01")
+
+        # 測試異常代碼回傳 None 且不崩潰
+        none_dt = loader.get_latest_dividend_date("NON_EXISTENT_TICKER_12345")
+        assert none_dt is None
+    finally:
+        if os.path.exists("test_div_loader.db"):
+            os.remove("test_div_loader.db")
+
+def test_patch_twse_data_if_needed(monkeypatch):
+    loader = DataLoader(db_path="test_patch_loader.db")
+    try:
+        # 建立模擬 yfinance 落後至 2026-10-14 的 DataFrame
+        dates = pd.to_datetime(["2026-10-12", "2026-10-13", "2026-10-14"])
+        mock_df = pd.DataFrame({
+            "Open": [114.2, 112.55, 113.0],
+            "High": [114.95, 113.2, 113.75],
+            "Low": [113.4, 111.9, 112.75],
+            "Close": [114.8, 112.4, 113.0],
+            "Volume": [106348658.0, 242070746.0, 64109641.0]
+        }, index=dates)
+
+        # Mock TwseScraper 快照包含 2026-10-15 最新數據
+        from src.scrapers.twse_scraper import TwseScraper
+        def mock_fetch_daily_snapshot(self, force_refresh=False):
+            return {
+                "0050": {
+                    "Code": "0050",
+                    "Name": "元大台灣50",
+                    "Open": 110.15,
+                    "High": 110.15,
+                    "Low": 108.55,
+                    "Close": 108.9,
+                    "Volume": 453386198.0,
+                    "Date": "2026-10-15"
+                }
+            }
+        monkeypatch.setattr(TwseScraper, "fetch_daily_snapshot", mock_fetch_daily_snapshot)
+
+        # Mock 配息日在 2026-07-21 (早於 2026-10-14，安全無除息問題)
+        monkeypatch.setattr(loader, "get_latest_dividend_date", lambda t: pd.Timestamp("2026-07-21"))
+
+        # 執行補丁
+        patched_df = loader.patch_twse_data_if_needed("0050.TW", mock_df, pd.to_datetime("2026-10-15"))
+        assert len(patched_df) == 4
+        assert str(patched_df.index[-1].date()) == "2026-10-15"
+        assert patched_df.iloc[-1]["Close"] == 108.9
+
+        # 測試：若 yfinance 已是最新日 (2026-10-15)，應保持不變
+        no_patch_needed = loader.patch_twse_data_if_needed("0050.TW", patched_df, pd.to_datetime("2026-10-15"))
+        assert len(no_patch_needed) == 4
+
+        # 測試：若除息日落在補丁期間 (例如 2026-10-15 除息)，為防折價誤差應跳過補丁
+        monkeypatch.setattr(loader, "get_latest_dividend_date", lambda t: pd.Timestamp("2026-10-15"))
+        skip_due_to_div = loader.patch_twse_data_if_needed("0050.TW", mock_df, pd.to_datetime("2026-10-15"))
+        assert len(skip_due_to_div) == 3
+
+        # 測試：非台股標的 (例如 SPY) 應直接返回
+        spy_df = loader.patch_twse_data_if_needed("SPY", mock_df, pd.to_datetime("2026-10-15"))
+        assert len(spy_df) == 3
+
+    finally:
+        if os.path.exists("test_patch_loader.db"):
+            os.remove("test_patch_loader.db")
+
+def test_fetch_data_with_twse_patch(monkeypatch, tmp_path):
+    db_file = str(tmp_path / "test_fetch_twse_patch.db")
+    loader = DataLoader(db_path=db_file)
+
+    dates = pd.to_datetime(["2026-10-12", "2026-10-13", "2026-10-14"])
+    mock_yf_df = pd.DataFrame({
+        "Open": [114.2, 112.55, 113.0],
+        "High": [114.95, 113.2, 113.75],
+        "Low": [113.4, 111.9, 112.75],
+        "Close": [114.8, 112.4, 113.0],
+        "Volume": [1000.0, 2000.0, 3000.0]
+    }, index=dates)
+
+    import yfinance as yf
+    monkeypatch.setattr(yf, "download", lambda *args, **kwargs: mock_yf_df)
+
+    from src.scrapers.twse_scraper import TwseScraper
+    monkeypatch.setattr(TwseScraper, "fetch_daily_snapshot", lambda self, force_refresh=False: {
+        "0050": {
+            "Code": "0050",
+            "Name": "元大台灣50",
+            "Open": 110.15,
+            "High": 110.15,
+            "Low": 108.55,
+            "Close": 108.9,
+            "Volume": 453386198.0,
+            "Date": "2026-10-15"
+        }
+    })
+    monkeypatch.setattr(loader, "get_latest_dividend_date", lambda t: pd.Timestamp("2026-07-21"))
+
+    df = loader.fetch_data("0050.TW", start_date="2026-10-12", end_date="2026-10-15", refresh=True)
+    assert not df.empty
+    assert len(df) == 4
+    assert str(df.index[-1].date()) == "2026-10-15"
+    assert df.iloc[-1]["Close"] == 108.9
+
+    # 驗證 SQLite 資料庫中亦持久化了 2026-10-15
+    stored = loader.storage.query_prices("0050.TW", "1d", "2026-10-12", "2026-10-15")
+    assert len(stored) == 4
+    assert stored.iloc[-1]["Close"] == 108.9
+
+
 
 

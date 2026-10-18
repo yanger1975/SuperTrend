@@ -8,7 +8,8 @@
 
 * **SQLite 本地快取與持久化 (`src/storage.py`, `src/data_loader.py`):**
   * **價格歷史 (`price_history`)**：自動下載並儲存 `yfinance` 的除權息調整價格資料（支援美股與台股如 `0050.TW`、`00935.TW` 之完整還原日 K 線），具備資料一致性校驗規則，避免異常 K 線干擾回測。
-  * **臺灣證券交易所工具模組 (`src/scrapers/twse_scraper.py`)**：支援 TWSE 官方端點數據解析、OpenAPI 盤後快照與中文全名對齊。
+  * **台股除權息還原與 TWSE 雙源補丁機制 (`src/data_loader.py`, `src/scrapers/twse_scraper.py`)**：為徹底消弭 Yahoo Finance 針對台股日線延遲 1 天更新的問題，`DataLoader` 整合了配息日智能判定與 TWSE 官方 OpenAPI 即時快照補丁。依據除權息調整數學原理，最新除息日之後的價格未受折價影響（原始成交價與還原價 100% 精確相等）。當偵測到 yfinance 台股資料落後最新交易日且缺漏區間在最新除息日之後時，系統自動向證交所 OpenAPI 或月度日線無縫補齊最新數據，徹底消除延遲同時杜絕除息跳空誤判。
+  * **臺灣證券交易所工具模組 (`src/scrapers/twse_scraper.py`)**：支援 TWSE 官方端點數據解析、OpenAPI 盤後快照（具備 5 分鐘記憶體快取防頻繁請求）、單日 K 線轉換與中文全名對齊。
   - **最適參數與 JSON 版控 (`supertrend_params` & `data/optimized_params.json`)**：將優化計算出的最佳 SuperTrend / HMA 參數組合及 CAGR、Max Drawdown 等指標儲存至 SQLite，並自動雙向同步至輕量化 `data/optimized_params.json`。在 GitHub Actions 等 CI/CD 無狀態環境中，系統會自動從 JSON 恢復優化參數，避免重複優化運算。
   - **市場狀態與訊號 (`stock_signals`)**：即時儲存標的最新交易日的持倉狀態 (`1=long`, `0=cash`)、進場參考點 (`Entry Ref`)、出場參考點 (`Exit Ref`)、收盤價與 HMA 數值。
 * **多標的自動化批次處理 (`run_batch_optimization.py` & `run_daily_scanner.py`):**

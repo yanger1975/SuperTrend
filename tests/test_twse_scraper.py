@@ -126,3 +126,30 @@ def test_data_loader_twse_routing(tmp_path):
     assert not df.empty
     assert len(df) == 10
     assert "Close" in df.columns
+
+def test_get_latest_snapshot_bar_and_fetch_recent_days():
+    scraper = TwseScraper()
+    scraper._daily_snapshot_cache = {
+        "0050": {
+            "Code": "0050",
+            "Name": "元大台灣50",
+            "Open": 192.5,
+            "High": 193.0,
+            "Low": 191.0,
+            "Close": 192.0,
+            "Volume": 12000000.0,
+            "Date": "2026-10-16"
+        }
+    }
+    scraper._daily_snapshot_time = 9999999999.0
+
+    bar = scraper.get_latest_snapshot_bar("0050.TW")
+    assert bar is not None
+    assert len(bar) == 1
+    assert bar.iloc[0]["Close"] == 192.0
+    assert str(bar.index[0].date()) == "2026-10-16"
+
+    # 測試 fetch_recent_days 當起始日就是 snapshot 日期時直接命中快照
+    recent = scraper.fetch_recent_days("0050.TW", "2026-10-16", "2026-10-16")
+    assert len(recent) == 1
+    assert recent.iloc[0]["Close"] == 192.0

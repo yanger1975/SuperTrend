@@ -276,6 +276,7 @@
                     <h3>2. 資料協調載入器 (src/data_loader.py)</h3>
                     <ul>
                         <li>協調儲存層與 <code>yfinance</code> / <code>EzMoneyScraper</code> / <code>TwseScraper</code> API。若本地快取已有資料則直接讀取；當偵測到以 <code>.EZ</code> 結尾之基金時調用 <code>EzMoneyScraper</code>；當偵測到以 <code>.TW</code> 結尾或於 <code>data/must_have_tw.json</code> 之台股標的時，自動透過 <code>yfinance</code> (<code>auto_adjust=True</code>) 下載完整除權息還原日 K 線並儲存標的元數據至 <code>ticker_info</code>。</li>
+                        <li>**台股除權息還原與 TWSE 即時補丁融合機制 (`patch_twse_data_if_needed`, `get_latest_dividend_date`)：** 依據除權息調整數學原理，在最新除息日之後的價格未受折價影響（原始成交價與還原價 100% 精確相等）。當偵測到 yfinance 台股資料落後最新交易日且缺漏區間在最新除息日之後時，系統自動向證交所 OpenAPI 或月度日線無縫補齊最新數據，徹底消除 Yahoo Finance 針對台股 1 天的更新延遲，同時杜絕除息跳空誤判。</li>
                         <li>提供防錯校正機制，修復不合邏輯的 K 線價格 (如 High &lt; Close)，並針對共同基金淨值資料自動補齊 Open/High/Low 等同於 Close 淨值，確保指標運算與回測流程相容。</li>
                         <li>**1 小時 (1-Hour) 自動截斷與日誌警告：** 當請求 1 小時頻率且指定日期區間超過 730 日時，自動將起始日期限制在 730 日內並發出日誌警告。</li>
                     </ul>
@@ -283,7 +284,7 @@
                     <h3>3. 數據爬蟲模組層 (src/scrapers/)</h3>
                     <ul>
                         <li>**<code>EzMoneyScraper</code> (<code>src/scrapers/ezmoney_scraper.py</code>)**：自動處理 ASP.NET CSRF 防偽權杖 (<code>__RequestVerificationToken</code>) 擷取、Session 資源自動釋放、民國/西元日期雙向轉換、HTML 淨值表格邊界與資料合法性校驗，並儲存標的元數據至 <code>ticker_info</code>。</li>
-                        <li>**<code>TwseScraper</code> (<code>src/scrapers/twse_scraper.py</code>)**：臺灣證券交易所 (TWSE) 官方數據工具，實作雙端點架構（<code>/exchangeReport/STOCK_DAY</code> 按月抓取歷史 K 線含 3.0 秒安全間隔與指數退避重試，以及 OpenAPI <code>/v1/exchangeReport/STOCK_DAY_ALL</code> 每日盤後快照）；支援民國年精準轉換為西元年，並支援台股中文名稱與代碼解析。</li>
+                        <li>**<code>TwseScraper</code> (<code>src/scrapers/twse_scraper.py</code>)**：臺灣證券交易所 (TWSE) 官方數據工具，實作雙端點架構（<code>/exchangeReport/STOCK_DAY</code> 按月抓取歷史 K 線含 3.0 秒安全間隔與指數退避重試，以及 OpenAPI <code>/v1/exchangeReport/STOCK_DAY_ALL</code> 每日盤後快照）；支援 5 分鐘記憶體快取以防重複請求、單日 K 線轉換 (<code>get_latest_snapshot_bar</code>) 與近期歷史區間抓取 (<code>fetch_recent_days</code>)；支援民國年精準轉換為西元年，並支援台股中文名稱與代碼解析。</li>
                     </ul>
 
 
@@ -384,6 +385,11 @@
                     <div class="decision-block">
                         <h4>G. 純 Python 自包含渲染與 GitHub Pages 原生無狀態發布</h4>
                         <p>捨棄繁瑣的現代前端 Node.js / Vite 建置流程，選擇以純 Python 生成自包含 HTML/CSS/Vanilla JS 檔案。此舉讓 GitHub Actions CI 完全免除額外執行環境安裝，將建置延遲壓縮至毫秒級；並配合 GitHub Pages 原生 Artifact 部署機制，避免在 Git Commit 中沉積大量 HTML 構建產物垃圾歷史。</p>
+                    </div>
+
+                    <div class="decision-block">
+                        <h4>H. 台股除權息還原與 TWSE 即時補丁融合機制 (消弭 1 日更新延遲)</h4>
+                        <p>針對 Yahoo Finance 對台股日線更新延遲（常落後 1 天）之問題，系統基於除權息調整的數學原理，以「最新除息日」作為安全拼接錨點。在最新除息日之後因無新的除息事件發生，TWSE 官方未還原價格與 yfinance 還原價格完全一致；<code>DataLoader</code> 在確認落後區間不跨越未調整除息日的前提下，自動調用 TWSE OpenAPI 即時盤後快照無縫補齊當日/缺漏 K 線，兼顧除權息歷史連續性與每日訊號的絕對即時性。</p>
                     </div>
                 </div>
             </div>

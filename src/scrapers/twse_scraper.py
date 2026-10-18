@@ -26,6 +26,8 @@ class TwseScraper:
         self.json_path = json_path
         self.storage = SQLiteStorage(db_path=self.db_path)
         self.logger = logging.getLogger(__name__)
+        self._daily_snapshot_cache: Optional[Dict[str, Dict[str, Any]]] = None
+        self._daily_snapshot_time: Optional[float] = None
 
     @staticmethod
     def resolve_ticker(ticker: str) -> Tuple[str, str]:
@@ -162,14 +164,19 @@ class TwseScraper:
                 "Low": low_p if not pd.isna(low_p) else close_p,
                 "Close": close_p,
                 "Volume": vol if not pd.isna(vol) else 0.0,
-                "Date": str(item.get("Date", "")).strip()
+                "Date": self.to_ad_date(str(item.get("Date", "")).strip()) if item.get("Date") else datetime.now().strftime("%Y-%m-%d")
             }
         return res
 
-    def fetch_daily_snapshot(self) -> Dict[str, Dict[str, Any]]:
+    def fetch_daily_snapshot(self, force_refresh: bool = False) -> Dict[str, Dict[str, Any]]:
         """
         向證券交易所 OpenAPI /v1/exchangeReport/STOCK_DAY_ALL 發送請求取得當日全市場快照。
+        具備 5 分鐘記憶體快取以防重複請求。
         """
+        if not force_refresh and self._daily_snapshot_cache is not None and self._daily_snapshot_time is not None:
+            if time.time() - self._daily_snapshot_time < 300:
+                return self._daily_snapshot_cache
+
         url = "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL"
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
@@ -178,10 +185,85 @@ class TwseScraper:
         try:
             with urllib.request.urlopen(req, timeout=15) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
-                return self.parse_daily_snapshot(data)
+                parsed = self.parse_daily_snapshot(data)
+                if parsed:
+                    self._daily_snapshot_cache = parsed
+                    self._daily_snapshot_time = time.time()
+                return parsed
         except Exception as e:
             self.logger.warning(f"取得 TWSE OpenAPI 快照失敗: {e}")
             return {}
+
+    def get_latest_snapshot_bar(self, ticker: str) -> Optional[pd.DataFrame]:
+        """
+        自當日全市場快照中取得特定標的的單日 K 線 DataFrame。
+        若快照無效或標的不存在，回傳 None。
+        """
+        code, _ = self.resolve_ticker(ticker)
+        snap = self.fetch_daily_snapshot()
+        item = snap.get(code)
+        if not item or pd.isna(item.get("Close")) or float(item.get("Close", 0)) <= 0:
+            return None
+
+        date_str = item.get("Date")
+        if not date_str:
+            return None
+
+        dt = pd.to_datetime(date_str)
+        df = pd.DataFrame([{
+            "Open": item["Open"],
+            "High": item["High"],
+            "Low": item["Low"],
+            "Close": item["Close"],
+            "Volume": item["Volume"]
+        }], index=[dt])
+        df.index.name = "Date"
+        return df[["Open", "High", "Low", "Close", "Volume"]]
+
+    def fetch_recent_days(self, ticker: str, start_date: str, end_date: str) -> pd.DataFrame:
+        """
+        抓取近期特定區間的台股官方日 K 線。
+        優先利用當日快照；若跨越或缺漏多日，則調用當月歷史資料。
+        """
+        code, _ = self.resolve_ticker(ticker)
+        start_dt = pd.to_datetime(start_date).normalize()
+        end_dt = pd.to_datetime(end_date).normalize()
+
+        snap_df = self.get_latest_snapshot_bar(ticker)
+        if snap_df is not None and not snap_df.empty:
+            snap_dt = snap_df.index[0].normalize()
+            if start_dt == snap_dt and end_dt >= snap_dt:
+                return snap_df
+
+        months = []
+        curr = start_dt.replace(day=1)
+        while curr <= end_dt:
+            months.append((curr.year, curr.month))
+            if curr.month == 12:
+                curr = curr.replace(year=curr.year + 1, month=1)
+            else:
+                curr = curr.replace(month=curr.month + 1)
+
+        dfs = []
+        for y, m in months:
+            m_df = self.fetch_monthly_history(code, y, m)
+            if not m_df.empty:
+                dfs.append(m_df)
+
+        if not dfs:
+            if snap_df is not None and not snap_df.empty:
+                return snap_df
+            return pd.DataFrame(columns=["Open", "High", "Low", "Close", "Volume"])
+
+        combined = pd.concat(dfs)
+        if snap_df is not None and not snap_df.empty:
+            combined = pd.concat([combined, snap_df])
+        combined = combined[~combined.index.duplicated(keep="last")]
+        combined.sort_index(inplace=True)
+
+        mask = (combined.index >= start_dt) & (combined.index <= end_dt)
+        filtered = combined.loc[mask, ["Open", "High", "Low", "Close", "Volume"]]
+        return filtered if not filtered.empty else combined[["Open", "High", "Low", "Close", "Volume"]].tail(1)
 
     def fetch_monthly_history(self, code: str, year: int, month: int, max_retries: int = 3) -> pd.DataFrame:
         """

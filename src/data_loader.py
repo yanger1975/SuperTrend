@@ -5,6 +5,7 @@ from src.storage import SQLiteStorage
 import os
 import json
 import logging
+from typing import Optional
 
 
 class DataLoader:
@@ -49,6 +50,109 @@ class DataLoader:
             df.loc[is_fund, "Open"] = df.loc[is_fund, "Close"]
             df.loc[is_fund, "High"] = df.loc[is_fund, "Close"]
             df.loc[is_fund, "Low"] = df.loc[is_fund, "Close"]
+
+        return df
+
+    def get_latest_dividend_date(self, ticker: str) -> Optional[pd.Timestamp]:
+        """
+        查詢標的最新除權息日（包含現金股利與股票分割）。
+        若查無記錄或發生例外，回傳 None。
+        """
+        try:
+            t = yf.Ticker(ticker)
+            actions = getattr(t, "actions", None)
+            dates = []
+            if actions is not None and not actions.empty:
+                if "Dividends" in actions.columns:
+                    divs = actions[actions["Dividends"] > 0]
+                    if not divs.empty:
+                        dates.extend(divs.index.tolist())
+                if "Stock Splits" in actions.columns:
+                    splits = actions[actions["Stock Splits"] > 0]
+                    if not splits.empty:
+                        dates.extend(splits.index.tolist())
+
+            if not dates:
+                divs = getattr(t, "dividends", None)
+                if divs is not None and not divs.empty:
+                    divs = divs[divs > 0]
+                    if not divs.empty:
+                        dates.extend(divs.index.tolist())
+
+            if dates:
+                latest = max(dates)
+                if hasattr(latest, "tzinfo") and latest.tzinfo is not None:
+                    latest = latest.tz_convert(None)
+                return pd.to_datetime(latest).normalize()
+        except Exception as e:
+            self.logger.warning(f"[{ticker}] 查詢配息記錄失敗: {e}")
+        return None
+
+    def patch_twse_data_if_needed(self, ticker: str, df: pd.DataFrame, end_dt: pd.Timestamp) -> pd.DataFrame:
+        """
+        若 yfinance 台股資料落後於 TWSE 最新交易日，且缺漏區間在最新除息日之後，
+        自動以 TWSE 官方日線無縫補齊，消除 Yahoo Finance 的 1 日更新延遲。
+        """
+        if df.empty or not ticker.upper().endswith(".TW"):
+            return df
+
+        try:
+            from src.scrapers.twse_scraper import TwseScraper
+            tw_scraper = TwseScraper(self.storage.db_path)
+            code, _ = tw_scraper.resolve_ticker(ticker)
+
+            snap = tw_scraper.fetch_daily_snapshot()
+            if not snap or code not in snap:
+                return df
+
+            item = snap[code]
+            date_str = item.get("Date")
+            if not date_str:
+                return df
+
+            twse_latest_dt = pd.to_datetime(date_str).normalize()
+            yf_latest_dt = df.index[-1].normalize()
+
+            # 若 yfinance 最新日期已達到或超過 TWSE 最新日期，無需補丁
+            if yf_latest_dt >= twse_latest_dt:
+                return df
+
+            # 若使用者請求的 end_dt 早於 TWSE 最新日期，代表請求歷史資料，無需補上今日快照
+            if end_dt < twse_latest_dt:
+                return df
+
+            # 檢查除權息日：缺漏期間必須在最新除權息日之後
+            latest_div = self.get_latest_dividend_date(ticker)
+            if latest_div is not None and yf_latest_dt < latest_div:
+                self.logger.warning(
+                    f"[{ticker}] yfinance 最新日期 ({yf_latest_dt.strftime('%Y-%m-%d')}) "
+                    f"早於最新除息日 ({latest_div.strftime('%Y-%m-%d')})，為防除息折價誤差跳過 TWSE 補丁。"
+                )
+                return df
+
+            # 補齊缺漏交易日
+            missing_start = (yf_latest_dt + pd.Timedelta(days=1)).strftime("%Y-%m-%d")
+            missing_end = twse_latest_dt.strftime("%Y-%m-%d")
+
+            b_days = len(pd.bdate_range(missing_start, missing_end))
+            if b_days <= 1:
+                patch_df = tw_scraper.get_latest_snapshot_bar(ticker)
+            else:
+                patch_df = tw_scraper.fetch_recent_days(ticker, missing_start, missing_end)
+
+            if patch_df is not None and not patch_df.empty:
+                patch_df = patch_df[["Open", "High", "Low", "Close", "Volume"]]
+                combined = pd.concat([df, patch_df])
+                combined = combined[~combined.index.duplicated(keep="last")]
+                combined.sort_index(inplace=True)
+                self.logger.info(
+                    f"[{ticker}] 成功透過 TWSE 補齊 {len(patch_df)} 筆最新交易日數據 "
+                    f"({patch_df.index[0].strftime('%Y-%m-%d')} ~ {patch_df.index[-1].strftime('%Y-%m-%d')})"
+                )
+                return combined
+
+        except Exception as e:
+            self.logger.warning(f"[{ticker}] TWSE 補丁執行異常，維持 yfinance 原始數據: {e}")
 
         return df
 
@@ -133,9 +237,16 @@ class DataLoader:
         # 清洗與校驗
         cleaned_df = self.validate_and_clean_data(data)
 
+        # 若為台股日線資料，自動檢查並以 TWSE 數據補齊延遲
+        if ticker.upper().endswith(".TW") and interval.lower() in ["1d"]:
+            cleaned_df = self.patch_twse_data_if_needed(ticker, cleaned_df, end_dt)
+            cleaned_df = self.validate_and_clean_data(cleaned_df)
+
         # 快取存入 SQLite
         self.storage.upsert_prices(cleaned_df, ticker, interval)
 
         # 存入後再次從資料庫查詢以確保時區和格式的完全對齊
         final_df = self.storage.query_prices(ticker, interval, start_date, end_date)
-        return self.validate_and_clean_data(final_df)
+        if not final_df.empty:
+            return self.validate_and_clean_data(final_df)
+        return cleaned_df
