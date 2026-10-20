@@ -153,3 +153,75 @@ def test_get_latest_snapshot_bar_and_fetch_recent_days():
     recent = scraper.fetch_recent_days("0050.TW", "2026-10-16", "2026-10-16")
     assert len(recent) == 1
     assert recent.iloc[0]["Close"] == 192.0
+
+def test_fetch_realtime_quotes_and_bar(monkeypatch):
+    scraper = TwseScraper()
+    mock_mis_response = {
+        "msgArray": [
+            {
+                "c": "0050",
+                "n": "元大台灣50",
+                "d": "20261020",
+                "t": "12:10:00",
+                "o": "107.6500",
+                "h": "108.3000",
+                "l": "107.3000",
+                "z": "107.8000",
+                "pz": "107.7500",
+                "y": "108.1500",
+                "b": "107.8000_107.7500_",
+                "a": "107.8500_107.9000_",
+                "v": "56000"
+            },
+            {
+                "c": "00935",
+                "n": "野村臺灣新科技50",
+                "d": "20261020",
+                "t": "12:10:05",
+                "o": "56.2000",
+                "h": "56.8500",
+                "l": "56.0500",
+                "z": "-",
+                "pz": "-",
+                "y": "56.5000",
+                "b": "56.2500_56.2000_",
+                "a": "56.3500_56.4000_",
+                "v": "5700"
+            }
+        ]
+    }
+
+    class MockResponse:
+        def __enter__(self):
+            return self
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            pass
+        def read(self):
+            return json.dumps(mock_mis_response).encode("utf-8")
+
+    def mock_urlopen(req, timeout=15):
+        return MockResponse()
+
+    monkeypatch.setattr("urllib.request.urlopen", mock_urlopen)
+
+    quotes = scraper.fetch_realtime_quotes(["0050.TW", "00935.TW"])
+    assert "0050.TW" in quotes
+    assert "00935.TW" in quotes
+
+    q0050 = quotes["0050.TW"]
+    assert q0050["close"] == 107.80
+    assert q0050["open"] == 107.65
+    assert q0050["high"] == 108.30
+    assert q0050["low"] == 107.30
+    assert q0050["date"] == "2026-10-20"
+
+    # 00935 z 是 "-"，應取 (56.25 + 56.35) / 2 = 56.30
+    q00935 = quotes["00935.TW"]
+    assert q00935["close"] == 56.30
+
+    bar = scraper.get_realtime_bar("0050.TW")
+    assert bar is not None
+    assert len(bar) == 1
+    assert bar.iloc[0]["Close"] == 107.80
+    assert list(bar.columns) == ["Open", "High", "Low", "Close", "Volume"]
+

@@ -284,7 +284,7 @@
                     <h3>3. 數據爬蟲模組層 (src/scrapers/)</h3>
                     <ul>
                         <li>**<code>EzMoneyScraper</code> (<code>src/scrapers/ezmoney_scraper.py</code>)**：自動處理 ASP.NET CSRF 防偽權杖 (<code>__RequestVerificationToken</code>) 擷取、Session 資源自動釋放、民國/西元日期雙向轉換、HTML 淨值表格邊界與資料合法性校驗，並儲存標的元數據至 <code>ticker_info</code>。</li>
-                        <li>**<code>TwseScraper</code> (<code>src/scrapers/twse_scraper.py</code>)**：臺灣證券交易所 (TWSE) 官方數據工具，實作雙端點架構（<code>/exchangeReport/STOCK_DAY</code> 按月抓取歷史 K 線含 3.0 秒安全間隔與指數退避重試，以及 OpenAPI <code>/v1/exchangeReport/STOCK_DAY_ALL</code> 每日盤後快照）；支援 5 分鐘記憶體快取以防重複請求、單日 K 線轉換 (<code>get_latest_snapshot_bar</code>) 與近期歷史區間抓取 (<code>fetch_recent_days</code>)；支援民國年精準轉換為西元年，並支援台股中文名稱與代碼解析。</li>
+                        <li>**<code>TwseScraper</code> (<code>src/scrapers/twse_scraper.py</code>)**：臺灣證券交易所 (TWSE) 官方數據工具，實作三端點融合架構：(1) <code>/exchangeReport/STOCK_DAY</code> 按月抓取歷史 K 線含 3.0 秒安全間隔與指數退避重試；(2) OpenAPI <code>/v1/exchangeReport/STOCK_DAY_ALL</code> 每日盤後快照；(3) <b>TWSE MIS 即時行情系統 (<code>mis.twse.com.tw</code>)</b>：透過 <code>fetch_realtime_quotes</code> 與 <code>get_realtime_bar</code> 於開盤時段批次查詢上市 (<code>tse_</code>) 與上櫃 (<code>otc_</code>) 最新成交價、五檔買賣價量、開高低與累積量，當暫時無成交時自動以買賣一檔中間價 <code>(bid+ask)/2</code> 安全估算。</li>
                     </ul>
 
 
@@ -346,6 +346,13 @@
                         <li>**多維度科技儀表板介面**：深色主題設計，支援美股與台股/基金 Tab 切換、雙核心表格（最新訊號與進出場價格表、最適參數與評分表，明確揭示 Score、Win Rate、CAGR、Max DD 與 Sharpe）、標頭點擊升降冪排序與即時搜尋過濾。</li>
                         <li>**原生 GitHub Pages 整合**：由 <code>daily_supertrend_ai_signals.yml</code> 自動調用生成並透過 <code>actions/deploy-pages</code> 發布，不污染 Git 主分支歷史。</li>
                     </ul>
+
+                    <h3>13. 台股盤中即時訊號監控模組 (run_intraday_tw_signals.py)</h3>
+                    <ul>
+                        <li>**盤中 13:10 極速純推論 (Inference-Only)**：於台北時間平日 13:10 (UTC 05:10) 自動由 GitHub Actions 排程觸發，直接載入已存最佳化參數，跳過繁重網格搜尋，數秒內完成全標的 SuperTrend AI 訊號計算。</li>
+                        <li>**記憶體虛擬 K 線拼接 (零污染原則)**：自本地 SQLite 載入截至昨日之已結算日 K 線，於記憶體中將 TWSE MIS 當日即時 Bar 追加至末端；不覆寫、不污染 SQLite 歷史資料庫，實現未收盤暫態與正式結算的徹底解耦。</li>
+                        <li>**高優先級行動指示告警**：自動比對昨日與今日部位變化，精準辨識【🟢 盤中突破買進 (NEW_BUY)】、【🔴 盤中跌破賣出 (NEW_SELL)】與【⚠️ 接近停損/突破警示 (距標 &lt; 1%)】，於 13:25 試撮收盤前 15 分鐘及時推播 Telegram，提供充裕下單應對時間。</li>
+                    </ul>
                 </div>
 
 
@@ -390,6 +397,11 @@
                     <div class="decision-block">
                         <h4>H. 台股除權息還原與 TWSE 即時補丁融合機制 (消弭 1 日更新延遲)</h4>
                         <p>針對 Yahoo Finance 對台股日線更新延遲（常落後 1 天）之問題，系統基於除權息調整的數學原理，以「最新除息日」作為安全拼接錨點。在最新除息日之後因無新的除息事件發生，TWSE 官方未還原價格與 yfinance 還原價格完全一致；<code>DataLoader</code> 在確認落後區間不跨越未調整除息日的前提下，自動調用 TWSE OpenAPI 即時盤後快照無縫補齊當日/缺漏 K 線，兼顧除權息歷史連續性與每日訊號的絕對即時性。</p>
+                    </div>
+
+                    <div class="decision-block">
+                        <h4>I. 台股盤中 13:10 即時訊號推播與記憶體虛擬 K 線拼接機制 (零污染架構)</h4>
+                        <p>台股交易時間為 09:00～13:30（13:25 開始收盤試撮）。盤中 13:10 日 K 線型態已完成 95% 以上，既能準確反應當日日線趨勢，又保有 15 分鐘的充裕實盤掛單窗口，消弭隔日開盤跳空風險。架構上嚴格恪守「零污染原則」，即時數據僅於記憶體中臨時拼接進行推論，絕不寫入 SQLite 歷史結算庫，實現盤中決策與盤後結算的乾淨解耦。</p>
                     </div>
                 </div>
             </div>

@@ -220,6 +220,153 @@ class TwseScraper:
         df.index.name = "Date"
         return df[["Open", "High", "Low", "Close", "Volume"]]
 
+    def fetch_realtime_quotes(self, tickers: List[str]) -> Dict[str, Dict[str, Any]]:
+        """
+        向 TWSE MIS 基本市況報導系統 (mis.twse.com.tw) 查詢台股/ETF 盤中即時報價。
+        同時支援上市 (tse_) 與上櫃 (otc_) 標的。
+
+        回傳格式：
+        {
+            "0050.TW": {
+                "code": "0050",
+                "symbol": "0050.TW",
+                "name": "元大台灣50",
+                "date": "2026-10-20",
+                "time": "12:13:04",
+                "open": 107.65,
+                "high": 108.30,
+                "low": 107.30,
+                "close": 107.70,
+                "yesterday_close": 108.15,
+                "best_bid": 107.65,
+                "best_ask": 107.70,
+                "volume": 62016.0
+            }
+        }
+        """
+        if not tickers:
+            return {}
+
+        code_map = {}
+        channels = []
+        for t in tickers:
+            code, symbol = self.resolve_ticker(t)
+            code_map[code] = symbol
+            channels.append(f"tse_{code}.tw")
+            channels.append(f"otc_{code}.tw")
+
+        ts = int(time.time() * 1000)
+        url = f"https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch={'|'.join(channels)}&json=1&delay=0&_={ts}"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Referer": "https://mis.twse.com.tw/stock/index.jsp"
+        }
+
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                raw_data = json.loads(resp.read().decode("utf-8"))
+        except Exception as e:
+            self.logger.warning(f"取得 TWSE MIS 即時行情失敗: {e}")
+            return {}
+
+        results = {}
+        msg_array = raw_data.get("msgArray", [])
+        for msg in msg_array:
+            code = str(msg.get("c", "")).strip()
+            if not code or code not in code_map:
+                continue
+
+            symbol = code_map[code]
+
+            def to_float(val: Any) -> Optional[float]:
+                if val is None or val == "" or val == "-":
+                    return None
+                try:
+                    return float(str(val).replace(",", "").strip())
+                except ValueError:
+                    return None
+
+            y_close = to_float(msg.get("y"))
+            open_p = to_float(msg.get("o"))
+            high_p = to_float(msg.get("h"))
+            low_p = to_float(msg.get("l"))
+            vol = to_float(msg.get("v")) or 0.0
+
+            b_list = [to_float(x) for x in msg.get("b", "").split("_") if x and x != "-"]
+            a_list = [to_float(x) for x in msg.get("a", "").split("_") if x and x != "-"]
+            best_bid = b_list[0] if b_list and b_list[0] is not None else None
+            best_ask = a_list[0] if a_list and a_list[0] is not None else None
+
+            match_p = to_float(msg.get("z"))
+            prev_p = to_float(msg.get("pz"))
+
+            if match_p is not None:
+                current_p = match_p
+            elif prev_p is not None:
+                current_p = prev_p
+            elif best_bid is not None and best_ask is not None:
+                current_p = (best_bid + best_ask) / 2.0
+            elif best_bid is not None:
+                current_p = best_bid
+            elif best_ask is not None:
+                current_p = best_ask
+            elif y_close is not None:
+                current_p = y_close
+            else:
+                continue
+
+            d_str = str(msg.get("d", "")).strip()
+            if len(d_str) == 8:
+                date_formatted = f"{d_str[:4]}-{d_str[4:6]}-{d_str[6:8]}"
+            else:
+                date_formatted = datetime.now().strftime("%Y-%m-%d")
+
+            o = open_p if open_p is not None else current_p
+            h = max(high_p if high_p is not None else current_p, o, current_p)
+            l = min(low_p if low_p is not None else current_p, o, current_p)
+            c = current_p
+
+            results[symbol] = {
+                "code": code,
+                "symbol": symbol,
+                "name": str(msg.get("n", "")).strip(),
+                "date": date_formatted,
+                "time": str(msg.get("t", "")).strip(),
+                "open": o,
+                "high": h,
+                "low": l,
+                "close": c,
+                "yesterday_close": y_close,
+                "best_bid": best_bid,
+                "best_ask": best_ask,
+                "volume": vol
+            }
+
+        return results
+
+    def get_realtime_bar(self, ticker: str) -> Optional[pd.DataFrame]:
+        """
+        自 TWSE MIS 取得特定標的之當日盤中即時單日 K 線 DataFrame。
+        若盤中無資料或非營業日，回傳 None。
+        """
+        code, symbol = self.resolve_ticker(ticker)
+        quotes = self.fetch_realtime_quotes([symbol])
+        item = quotes.get(symbol) or quotes.get(code)
+        if not item or item.get("close") is None or item["close"] <= 0:
+            return None
+
+        dt = pd.to_datetime(item["date"])
+        df = pd.DataFrame([{
+            "Open": item["open"],
+            "High": item["high"],
+            "Low": item["low"],
+            "Close": item["close"],
+            "Volume": item["volume"]
+        }], index=[dt])
+        df.index.name = "Date"
+        return df[["Open", "High", "Low", "Close", "Volume"]]
+
     def fetch_recent_days(self, ticker: str, start_date: str, end_date: str) -> pd.DataFrame:
         """
         抓取近期特定區間的台股官方日 K 線。
