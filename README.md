@@ -230,9 +230,9 @@ python run_intraday_tw_signals.py --tickers 0050.TW 00935.TW --dry-run
 
 ### G. GitHub Actions 自動化雲端部署 (`.github/workflows/`)
 本專案已內建完整的 GitHub Actions 自動化工作流：
-- **AI 策略盤後掃描 (`daily_supertrend_ai_signals.yml`)**：於美股收盤後（UTC 23:00，台北時間隔日 07:00）自動更新數據與訊號推播，每逢週六（UTC 23:00）自動觸發全標的 AI 學習尋優並回寫 Git。
+- **AI 策略盤後掃描 (`daily_supertrend_ai_signals.yml`)**：於美股收盤後（UTC 23:30，台北時間隔日 07:30）自動更新數據與訊號推播，避開整點尖峰排隊；每逢週六（UTC 23:30）自動觸發全標的 AI 學習尋優並回寫 Git。
 - **台股盤中 13:10 即時監控 (`intraday_tw_signals.yml`)**：於週一至週五台股盤中 UTC 05:10（台北時間 13:10）自動觸發，連線 TWSE MIS 即時行情進行快速推論並發送 Telegram 盤中決策建議。
-- **傳統策略掃描 (`daily_signals.yml`)**：往後推遲至 UTC 00:00（台北時間週二至週六 08:00，台股開盤前 1 小時）執行每日掃描，每逢週末（UTC 週日 00:00，台北時間週日 08:00）觸發全標的參數網格重新尋優與熱門清單更新。
+- **傳統策略掃描 (`daily_signals.yml`)**：設於 UTC 00:30（台北時間週二至週六 08:30，台股開盤前半小時）執行每日掃描，每逢週末（UTC 週日 00:30，台北時間週日 08:30）觸發全標的參數網格重新尋優與熱門清單更新。
 - **GitHub Pages 自動構建與部署**：`daily_supertrend_ai_signals.yml` 執行完畢後，自動調用 HTML 渲染器生成 `public/index.html`，並透過 `actions/upload-pages-artifact` 與 `actions/deploy-pages` 原生發布至 GitHub Pages，同時在 Telegram 推播訊息尾部附加即時網頁連結。
   - *前置設定*：在 GitHub 儲存庫之 `Settings` -> `Pages` -> `Build and deployment` 中，將 `Source` 選擇為 `GitHub Actions` 即可。
 - **併發推送衝突防禦 (Concurrency Defense)**：雙工作流均啟用完整 Git 歷程檢索（`fetch-depth: 0`）與自動 Rebase 重試機制（`git pull --rebase --autostash`，最多重試 5 次），徹底防止多項工作流同時執行或遠端已有新 commit 時所造成的 `[rejected] fetch first` 推送失敗問題。
@@ -286,3 +286,5 @@ python run_intraday_tw_signals.py --tickers 0050.TW 00935.TW --dry-run
    為避免 Pandas 對齊時出現時區錯誤，資料載入時統一將時區轉換為 naive (不含時區)，以 UTC 時間軸進行對齊與比對。
 3. **無融資與融券利息計算：**
    回測引擎之空頭 (Short) 回測未扣除融券借券利息與借券成本，若執行空頭回測，其實盤效果可能會低於回測值。
+4. **台股盤後 14:30 前未結算日 K 線防禦：**
+   為杜絕晨間排程因 GitHub Actions 佇列延遲至 09:00 開盤後才執行時誤抓早盤未成形即時資料之問題，`DataLoader` 在台北時間 14:30 盤後正式結算前，對台股標的 (`.TW` 與 `.EZ`) 嚴格強制結束日期為昨日（前一營業日），並自動自 yfinance 下載中過濾當日未結算即時 Bar，防止未收盤價格污染日線歷史資料庫。

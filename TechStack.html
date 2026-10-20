@@ -277,6 +277,7 @@
                     <ul>
                         <li>協調儲存層與 <code>yfinance</code> / <code>EzMoneyScraper</code> / <code>TwseScraper</code> API。若本地快取已有資料則直接讀取；當偵測到以 <code>.EZ</code> 結尾之基金時調用 <code>EzMoneyScraper</code>；當偵測到以 <code>.TW</code> 結尾或於 <code>data/must_have_tw.json</code> 之台股標的時，自動透過 <code>yfinance</code> (<code>auto_adjust=True</code>) 下載完整除權息還原日 K 線並儲存標的元數據至 <code>ticker_info</code>。</li>
                         <li>**台股除權息還原與 TWSE 即時補丁融合機制 (`patch_twse_data_if_needed`, `get_latest_dividend_date`)：** 依據除權息調整數學原理，在最新除息日之後的價格未受折價影響（原始成交價與還原價 100% 精確相等）。當偵測到 yfinance 台股資料落後最新交易日且缺漏區間在最新除息日之後時，系統自動向證交所 OpenAPI 或月度日線無縫補齊最新數據，徹底消除 Yahoo Finance 針對台股 1 天的更新延遲，同時杜絕除息跳空誤判。</li>
+                        <li>**台股盤後 14:30 前未結算日 K 線防禦：** 當前台北時間在 14:30 盤後正式結算前，所有台股標的 (<code>.TW</code> 與 <code>.EZ</code>) 結束日期強制鎖定為前一營業日（昨日），並自動自 yfinance 與快取中剔除當日未成形即時 Bar，防止晨間報告誤將早盤即時行情寫入歷史日線資料庫。</li>
                         <li>提供防錯校正機制，修復不合邏輯的 K 線價格 (如 High &lt; Close)，並針對共同基金淨值資料自動補齊 Open/High/Low 等同於 Close 淨值，確保指標運算與回測流程相容。</li>
                         <li>**1 小時 (1-Hour) 自動截斷與日誌警告：** 當請求 1 小時頻率且指定日期區間超過 730 日時，自動將起始日期限制在 730 日內並發出日誌警告。</li>
                     </ul>
@@ -380,8 +381,8 @@
                     </div>
 
                     <div class="decision-block">
-                        <h4>E. GitHub Actions 收盤延遲排程 (UTC 23:00) 與營業日快取校驗</h4>
-                        <p>考量美股收盤後 Yahoo 財經數據處理與封存時間，GitHub Actions 的傳統 SuperTrend 與 SuperTrend AI 自動排程統一設於 UTC 23:00 (台北時間隔日上午 07:00) 觸發，確保數據完全就緒；排程並優先依據 Cron 表達式辨識週六避免隊列延遲跨日；<code>DataLoader</code> 採用營業日覆蓋判定 (<code>pd.bdate_range</code>) 防止週中快取假命中，並自動將 <code>yf.download</code> 之 <code>end</code> 參數設為 <code>end_date + 1 day</code>。</p>
+                        <h4>E. GitHub Actions 收盤延遲排程 (UTC 23:30) 與營業日快取校驗</h4>
+                        <p>考量美股收盤後 Yahoo 財經數據處理與封存時間，並徹底避開整點 (<code>:00</code>) 的 GitHub Actions 世界級排隊尖峰延遲，SuperTrend AI 自動排程設於 UTC 23:30 (台北時間隔日上午 07:30) 觸發，傳統策略排程設於 UTC 00:30 (台北時間 08:30)，確保數據完全就緒且能於數分鐘內快速分配伺服器；排程並優先依據 Cron 表達式辨識週六避免隊列延遲跨日；<code>DataLoader</code> 採用營業日覆蓋判定 (<code>pd.bdate_range</code>) 防止週中快取假命中，並自動將 <code>yf.download</code> 之 <code>end</code> 參數設為 <code>end_date + 1 day</code>。</p>
                     </div>
 
                     <div class="decision-block">

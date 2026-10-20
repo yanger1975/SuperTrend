@@ -187,6 +187,36 @@ def test_fetch_data_with_twse_patch(monkeypatch, tmp_path):
     assert len(stored) == 4
     assert stored.iloc[-1]["Close"] == 108.9
 
+def test_tw_morning_unclosed_defense(tmp_path, monkeypatch):
+    db_file = str(tmp_path / "test_unclosed.db")
+    loader = DataLoader(db_path=db_file)
+
+    # 模擬今天日期為 2026-10-20，yfinance 回傳了包含今天早盤的資料
+    dates = pd.to_datetime(["2026-10-19", "2026-10-20"])
+    mock_yf_df = pd.DataFrame({
+        "Open": [107.45, 107.65],
+        "High": [108.30, 108.30],
+        "Low": [107.10, 107.30],
+        "Close": [108.15, 107.45], # 10-20 是盤中價
+        "Volume": [10000.0, 5000.0]
+    }, index=dates)
+
+    import yfinance as yf
+    monkeypatch.setattr(yf, "download", lambda *args, **kwargs: mock_yf_df)
+
+    # 當前時間在 14:30 前執行 fetch_data，即使指定 end_date 為 2026-10-20
+    df = loader.fetch_data("0050.TW", start_date="2026-10-19", end_date="2026-10-20", refresh=True)
+
+    # 驗證回傳結果已剔除 2026-10-20，最新一筆只停留在 2026-10-19 (昨收 108.15)
+    assert not df.empty
+    assert str(df.index[-1].date()) == "2026-10-19"
+    assert df.iloc[-1]["Close"] == 108.15
+
+    # 驗證 SQLite 資料庫中亦未寫入 2026-10-20
+    stored = loader.storage.query_prices("0050.TW", "1d", "2026-10-19", "2026-10-25")
+    assert str(stored.index[-1].date()) == "2026-10-19"
+
+
 
 
 

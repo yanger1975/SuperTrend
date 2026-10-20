@@ -2,13 +2,13 @@ name: Daily SuperTrend AI Signal Scanner & Telegram Notifier
 
 on:
   schedule:
-    # 1. 週一至週五美股收盤後 2-3 小時 (UTC 23:00，對應台北時間隔日早上 07:00)
-    #    確保 Yahoo Finance 數據完全結算封存
-    - cron: '0 23 * * 1-5'
+    # 1. 週一至週五美股收盤後 2.5 小時 (UTC 23:30，對應台北時間隔日早上 07:30)
+    #    避開整點尖峰佇列壅塞，確保 Yahoo Finance 數據完全結算封存
+    - cron: '30 23 * * 1-5'
 
-    # 2. 固定週六 (UTC 23:00 週六，對應台北時間週日早上 07:00)
+    # 2. 固定週六 (UTC 23:30 週六，對應台北時間週日早上 07:30)
     #    觸發全標的重新進行網格參數優化
-    - cron: '0 23 * * 6'
+    - cron: '30 23 * * 6'
   workflow_dispatch: # 支援在 GitHub 網頁上手動點擊執行測試
 
 concurrency:

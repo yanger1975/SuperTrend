@@ -21,7 +21,7 @@ import json
 import sys
 import os
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone, time as dt_time
 from typing import List, Dict, Any, Tuple, Optional
 import pandas as pd
 import numpy as np
@@ -373,7 +373,14 @@ def main():
     for ticker in target_tickers:
         try:
             logger.info(f"刻正下載/更新 [{ticker}] 歷史數據...")
-            raw_df = data_loader.fetch_data(ticker, start_date=args.start, end_date=args.date)
+            utc_now = datetime.now(timezone.utc)
+            tw_now = utc_now + timedelta(hours=8)
+            if ticker.upper().endswith((".TW", ".EZ")) and tw_now.time() < dt_time(14, 30):
+                eff_end_date = (tw_now.date() - timedelta(days=1)).strftime("%Y-%m-%d")
+            else:
+                eff_end_date = args.date
+
+            raw_df = data_loader.fetch_data(ticker, start_date=args.start, end_date=eff_end_date)
             if raw_df.empty or len(raw_df) < 30:
                 logger.warning(f"標的 [{ticker}] 數據不足，跳過計算。")
                 continue
@@ -381,7 +388,7 @@ def main():
             param = get_best_param_for_ticker(
                 storage=storage,
                 ticker=ticker,
-                target_date_str=args.date,
+                target_date_str=eff_end_date,
                 raw_df=raw_df,
                 force_reoptimize=args.force_reoptimize
             )

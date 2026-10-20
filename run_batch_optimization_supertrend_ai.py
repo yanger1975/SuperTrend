@@ -17,7 +17,7 @@ import os
 import json
 import argparse
 import traceback
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone, time as dt_time
 import pandas as pd
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dateutil.relativedelta import relativedelta
@@ -256,7 +256,15 @@ def process_ticker(ticker, args):
     print(f"[{ticker}] 開始處理...")
     try:
         start_date = (datetime.now() - relativedelta(years=5)).strftime("%Y-%m-%d")
-        end_date = datetime.now().strftime("%Y-%m-%d")
+
+        # 針對台股/國內基金：若當前台北時間在 14:30 盤後正式結算前，
+        # 結束日期強制鎖定為前一營業日（昨日），確保晨報完全使用已結算日線
+        utc_now = datetime.now(timezone.utc)
+        tw_now = utc_now + timedelta(hours=8)
+        if ticker.upper().endswith((".TW", ".EZ")) and tw_now.time() < dt_time(14, 30):
+            end_date = (tw_now.date() - timedelta(days=1)).strftime("%Y-%m-%d")
+        else:
+            end_date = datetime.now().strftime("%Y-%m-%d")
 
         loader = DataLoader()
         df = loader.fetch_data(ticker, start_date=start_date, end_date=end_date)
