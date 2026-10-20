@@ -1,33 +1,18 @@
 [
   {
-    "ticker": "SMH",
-    "name": "SMH",
+    "ticker": "QQQM",
+    "name": "QQQM",
     "market": "us",
     "is_fund": false,
     "date": "2026-10-16",
-    "close": "539.79",
+    "close": "292.26",
     "currency": "$",
     "position": "cash",
-    "entry_ref": "592.36",
+    "entry_ref": "303.70",
     "exit_ref": "-",
-    "distance_pct": -8.87,
+    "distance_pct": -3.77,
     "action": "WAIT_CASH",
-    "updated_at": "2026-10-18 00:54:34"
-  },
-  {
-    "ticker": "GLD",
-    "name": "GLD",
-    "market": "us",
-    "is_fund": false,
-    "date": "2026-10-16",
-    "close": "382.01",
-    "currency": "$",
-    "position": "cash",
-    "entry_ref": "385.33",
-    "exit_ref": "-",
-    "distance_pct": -0.86,
-    "action": "WAIT_CASH",
-    "updated_at": "2026-10-18 00:54:34"
+    "updated_at": "2026-10-20 01:32:58"
   },
   {
     "ticker": "SPY",
@@ -42,22 +27,37 @@
     "exit_ref": "752.57",
     "distance_pct": 1.42,
     "action": "HOLD_LONG",
-    "updated_at": "2026-10-18 00:54:34"
+    "updated_at": "2026-10-20 01:32:58"
   },
   {
-    "ticker": "QQQM",
-    "name": "QQQM",
+    "ticker": "GLD",
+    "name": "GLD",
     "market": "us",
     "is_fund": false,
     "date": "2026-10-16",
-    "close": "292.26",
+    "close": "382.01",
     "currency": "$",
     "position": "cash",
-    "entry_ref": "303.70",
+    "entry_ref": "385.33",
     "exit_ref": "-",
-    "distance_pct": -3.77,
+    "distance_pct": -0.86,
     "action": "WAIT_CASH",
-    "updated_at": "2026-10-18 00:54:34"
+    "updated_at": "2026-10-20 01:32:58"
+  },
+  {
+    "ticker": "SMH",
+    "name": "SMH",
+    "market": "us",
+    "is_fund": false,
+    "date": "2026-10-16",
+    "close": "539.79",
+    "currency": "$",
+    "position": "cash",
+    "entry_ref": "592.36",
+    "exit_ref": "-",
+    "distance_pct": -8.87,
+    "action": "WAIT_CASH",
+    "updated_at": "2026-10-20 01:32:58"
   },
   {
     "ticker": "SPMO",
@@ -72,7 +72,7 @@
     "exit_ref": "-",
     "distance_pct": -7.73,
     "action": "WAIT_CASH",
-    "updated_at": "2026-10-18 00:54:34"
+    "updated_at": "2026-10-20 01:32:58"
   },
   {
     "ticker": "VNQ",
@@ -87,7 +87,7 @@
     "exit_ref": "88.24",
     "distance_pct": 3.99,
     "action": "HOLD_LONG",
-    "updated_at": "2026-10-18 00:54:34"
+    "updated_at": "2026-10-20 01:32:58"
   },
   {
     "ticker": "DIVB",
@@ -102,81 +102,81 @@
     "exit_ref": "66.26",
     "distance_pct": 3.83,
     "action": "HOLD_LONG",
-    "updated_at": "2026-10-18 00:54:34"
-  },
-  {
-    "ticker": "0050.TW",
-    "name": "元大台灣50",
-    "market": "tw",
-    "is_fund": false,
-    "date": "2026-10-16",
-    "close": "109.00",
-    "currency": "NT$",
-    "position": "cash",
-    "entry_ref": "115.47",
-    "exit_ref": "-",
-    "distance_pct": -5.6,
-    "action": "WAIT_CASH",
-    "updated_at": "2026-10-18 00:54:34"
+    "updated_at": "2026-10-20 01:32:58"
   },
   {
     "ticker": "00935.TW",
     "name": "野村臺灣新科技50",
     "market": "tw",
     "is_fund": false,
-    "date": "2026-10-16",
-    "close": "57.00",
+    "date": "2026-10-20",
+    "close": "56.15",
     "currency": "NT$",
     "position": "cash",
-    "entry_ref": "60.39",
+    "entry_ref": "59.20",
     "exit_ref": "-",
-    "distance_pct": -5.61,
+    "distance_pct": -5.15,
     "action": "WAIT_CASH",
-    "updated_at": "2026-10-18 00:54:34"
+    "updated_at": "2026-10-20 01:32:58"
+  },
+  {
+    "ticker": "0050.TW",
+    "name": "元大台灣50",
+    "market": "tw",
+    "is_fund": false,
+    "date": "2026-10-20",
+    "close": "107.45",
+    "currency": "NT$",
+    "position": "cash",
+    "entry_ref": "113.90",
+    "exit_ref": "-",
+    "distance_pct": -5.66,
+    "action": "WAIT_CASH",
+    "updated_at": "2026-10-20 01:32:58"
   },
   {
     "ticker": "33YTW.EZ",
     "name": "統一全球新科技基金",
     "market": "tw",
     "is_fund": true,
-    "date": "2026-10-15",
-    "close": "107.30",
+    "date": "2026-10-16",
+    "close": "103.96",
     "currency": "NT$",
     "position": "cash",
-    "entry_ref": "110.17",
+    "entry_ref": "106.98",
     "exit_ref": "-",
-    "distance_pct": -2.61,
+    "distance_pct": -2.82,
     "action": "WAIT_CASH",
-    "updated_at": "2026-10-18 00:54:34"
+    "updated_at": "2026-10-20 01:32:58"
   },
   {
     "ticker": "25YTW.EZ",
     "name": "統一新亞洲科技能源基金",
     "market": "tw",
     "is_fund": true,
-    "date": "2026-10-15",
-    "close": "127.25",
+    "date": "2026-10-16",
+    "close": "125.68",
     "currency": "NT$",
     "position": "cash",
-    "entry_ref": "133.21",
+    "entry_ref": "131.52",
     "exit_ref": "-",
-    "distance_pct": -4.47,
+    "distance_pct": -4.44,
     "action": "WAIT_CASH",
-    "updated_at": "2026-10-18 00:54:34"
+    "updated_at": "2026-10-20 01:32:58"
   },
   {
     "ticker": "10YTW.EZ",
     "name": "統一奔騰基金",
     "market": "tw",
     "is_fund": true,
-    "date": "2026-10-16",
-    "close": "769.65",
+    "date": "2026-10-19",
+    "close": "768.89",
     "currency": "NT$",
     "position": "cash",
     "entry_ref": "780.16",
     "exit_ref": "-",
-    "distance_pct": -1.35,
+    "distance_pct": -1.44,
     "action": "WAIT_CASH",
-    "updated_at": "2026-10-18 00:54:34"
+    "updated_at": "2026-10-20 01:32:58"
   }
 ]
