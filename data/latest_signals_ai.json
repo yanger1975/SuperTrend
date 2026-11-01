@@ -1,50 +1,5 @@
 [
   {
-    "ticker": "SMH",
-    "name": "SMH",
-    "market": "us",
-    "is_fund": false,
-    "date": "2026-10-30",
-    "close": "522.49",
-    "currency": "$",
-    "position": "cash",
-    "entry_ref": "581.26",
-    "exit_ref": "-",
-    "distance_pct": -10.11,
-    "action": "WAIT_CASH",
-    "updated_at": "2026-10-31 02:39:52"
-  },
-  {
-    "ticker": "GLD",
-    "name": "GLD",
-    "market": "us",
-    "is_fund": false,
-    "date": "2026-10-30",
-    "close": "355.78",
-    "currency": "$",
-    "position": "cash",
-    "entry_ref": "369.16",
-    "exit_ref": "-",
-    "distance_pct": -3.62,
-    "action": "WAIT_CASH",
-    "updated_at": "2026-10-31 02:39:52"
-  },
-  {
-    "ticker": "QQQM",
-    "name": "QQQM",
-    "market": "us",
-    "is_fund": false,
-    "date": "2026-10-30",
-    "close": "284.34",
-    "currency": "$",
-    "position": "cash",
-    "entry_ref": "294.94",
-    "exit_ref": "-",
-    "distance_pct": -3.59,
-    "action": "WAIT_CASH",
-    "updated_at": "2026-10-31 02:39:52"
-  },
-  {
     "ticker": "SPY",
     "name": "SPY",
     "market": "us",
@@ -57,37 +12,52 @@
     "exit_ref": "752.57",
     "distance_pct": 0.42,
     "action": "HOLD_LONG",
-    "updated_at": "2026-10-31 02:39:52"
+    "updated_at": "2026-11-01 02:29:55"
   },
   {
-    "ticker": "VNQ",
-    "name": "VNQ",
+    "ticker": "QQQM",
+    "name": "QQQM",
     "market": "us",
     "is_fund": false,
     "date": "2026-10-30",
-    "close": "93.94",
-    "currency": "$",
-    "position": "long",
-    "entry_ref": "-",
-    "exit_ref": "89.57",
-    "distance_pct": 4.88,
-    "action": "HOLD_LONG",
-    "updated_at": "2026-10-31 02:39:52"
-  },
-  {
-    "ticker": "SPMO",
-    "name": "SPMO",
-    "market": "us",
-    "is_fund": false,
-    "date": "2026-10-30",
-    "close": "136.27",
+    "close": "284.34",
     "currency": "$",
     "position": "cash",
-    "entry_ref": "149.24",
+    "entry_ref": "303.04",
     "exit_ref": "-",
-    "distance_pct": -8.69,
+    "distance_pct": -6.17,
     "action": "WAIT_CASH",
-    "updated_at": "2026-10-31 02:39:52"
+    "updated_at": "2026-11-01 02:29:55"
+  },
+  {
+    "ticker": "GLD",
+    "name": "GLD",
+    "market": "us",
+    "is_fund": false,
+    "date": "2026-10-30",
+    "close": "355.78",
+    "currency": "$",
+    "position": "cash",
+    "entry_ref": "377.00",
+    "exit_ref": "-",
+    "distance_pct": -5.63,
+    "action": "WAIT_CASH",
+    "updated_at": "2026-11-01 02:29:55"
+  },
+  {
+    "ticker": "SMH",
+    "name": "SMH",
+    "market": "us",
+    "is_fund": false,
+    "date": "2026-10-30",
+    "close": "522.49",
+    "currency": "$",
+    "position": "cash",
+    "entry_ref": "575.38",
+    "exit_ref": "-",
+    "distance_pct": -9.19,
+    "action": "WAIT_CASH",
+    "updated_at": "2026-11-01 02:29:55"
   },
   {
     "ticker": "DIVB",
@@ -102,22 +72,37 @@
     "exit_ref": "68.51",
     "distance_pct": 4.1,
     "action": "HOLD_LONG",
-    "updated_at": "2026-10-31 02:39:52"
+    "updated_at": "2026-11-01 02:29:55"
   },
   {
-    "ticker": "00935.TW",
-    "name": "野村臺灣新科技50",
-    "market": "tw",
+    "ticker": "VNQ",
+    "name": "VNQ",
+    "market": "us",
     "is_fund": false,
     "date": "2026-10-30",
-    "close": "53.30",
-    "currency": "NT$",
+    "close": "93.94",
+    "currency": "$",
+    "position": "long",
+    "entry_ref": "-",
+    "exit_ref": "89.79",
+    "distance_pct": 4.62,
+    "action": "HOLD_LONG",
+    "updated_at": "2026-11-01 02:29:55"
+  },
+  {
+    "ticker": "SPMO",
+    "name": "SPMO",
+    "market": "us",
+    "is_fund": false,
+    "date": "2026-10-30",
+    "close": "136.27",
+    "currency": "$",
     "position": "cash",
-    "entry_ref": "56.18",
+    "entry_ref": "149.24",
     "exit_ref": "-",
-    "distance_pct": -5.13,
+    "distance_pct": -8.69,
     "action": "WAIT_CASH",
-    "updated_at": "2026-10-31 02:39:52"
+    "updated_at": "2026-11-01 02:29:55"
   },
   {
     "ticker": "0050.TW",
@@ -132,7 +117,22 @@
     "exit_ref": "-",
     "distance_pct": -6.0,
     "action": "WAIT_CASH",
-    "updated_at": "2026-10-31 02:39:52"
+    "updated_at": "2026-11-01 02:29:55"
+  },
+  {
+    "ticker": "00935.TW",
+    "name": "野村臺灣新科技50",
+    "market": "tw",
+    "is_fund": false,
+    "date": "2026-10-30",
+    "close": "53.30",
+    "currency": "NT$",
+    "position": "cash",
+    "entry_ref": "56.18",
+    "exit_ref": "-",
+    "distance_pct": -5.13,
+    "action": "WAIT_CASH",
+    "updated_at": "2026-11-01 02:29:55"
   },
   {
     "ticker": "25YTW.EZ",
@@ -147,7 +147,7 @@
     "exit_ref": "-",
     "distance_pct": -4.46,
     "action": "WAIT_CASH",
-    "updated_at": "2026-10-31 02:39:52"
+    "updated_at": "2026-11-01 02:29:55"
   },
   {
     "ticker": "33YTW.EZ",
@@ -162,7 +162,7 @@
     "exit_ref": "-",
     "distance_pct": -2.97,
     "action": "WAIT_CASH",
-    "updated_at": "2026-10-31 02:39:52"
+    "updated_at": "2026-11-01 02:29:55"
   },
   {
     "ticker": "10YTW.EZ",
@@ -177,6 +177,6 @@
     "exit_ref": "-",
     "distance_pct": -2.36,
     "action": "WAIT_CASH",
-    "updated_at": "2026-10-31 02:39:52"
+    "updated_at": "2026-11-01 02:29:55"
   }
 ]
