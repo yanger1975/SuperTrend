@@ -1,15 +1,17 @@
 name: Daily SuperTrend Signal Scanner & Telegram Notifier
 
 on:
-  schedule:
-    # 1. 美股收盤後 (UTC 00:30，對應台北時間週二至週六早上 08:30，台股開盤前)
-    #    避開整點排隊延遲，進行每日歷史數據更新與訊號掃描
-    - cron: '30 0 * * 2-6'
-
-    # 2. 固定週末 (UTC 00:30 週日，對應台北時間週日早上 08:30)
-    #    觸發全標的重新進行網格參數優化
-    - cron: '30 0 * * 0'
-  workflow_dispatch: # 支援在 GitHub 網頁上手動點擊執行測試
+  # 已停用 GitHub Actions 內建排程，全面改由外部（如 cron-job.org）透過 API 觸發
+  # schedule:
+  #   - cron: '30 0 * * 2-6'
+  #   - cron: '30 0 * * 0'
+  workflow_dispatch:
+    inputs:
+      force_reoptimize:
+        description: '是否強制重新優化全標的參數 (--force-reoptimize)'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: daily-signals-${{ github.ref }}
@@ -42,15 +44,15 @@ jobs:
       - name: Determine if Force Reoptimize is Needed
         id: check_schedule
         run: |
-          # 優先依據觸發排程的 Cron 表達式判斷是否為週末排程，避免 GitHub Actions 隊列延遲跨日誤判
-          CRON_SCHEDULE="${{ github.event.schedule }}"
-          DAY_OF_WEEK=$(date +%u)
-          if [[ "$CRON_SCHEDULE" == *" 0"* ]] || [[ "$CRON_SCHEDULE" == *" 6"* ]] || ([ -z "$CRON_SCHEDULE" ] && ([ "$DAY_OF_WEEK" -eq 7 ] || [ "$DAY_OF_WEEK" -eq 6 ])); then
+          # 檢查是否手動勾選強制優化，或以台灣時區 (Asia/Taipei) 判斷是否為週末 (6=週六, 7=週日)
+          INPUT_FORCE="${{ inputs.force_reoptimize }}"
+          TW_DAY=$(TZ="Asia/Taipei" date +%u)
+          if [ "$INPUT_FORCE" = "true" ] || [ "$TW_DAY" -eq 6 ] || [ "$TW_DAY" -eq 7 ]; then
             echo "REOPTIMIZE_FLAG=--force-reoptimize" >> $GITHUB_ENV
-            echo "Schedule or Day is weekend, enabling force re-optimization."
+            echo "台灣時間為週末 (星期 $TW_DAY) 或手動指定，已啟用 --force-reoptimize 重新進行參數優化！"
           else
             echo "REOPTIMIZE_FLAG=" >> $GITHUB_ENV
-            echo "Regular weekday run."
+            echo "台灣時間為平日 (星期 $TW_DAY)，使用既有參數執行每日訊號掃描。"
           fi
 
       - name: Run Daily Scanner & Send Telegram Notification
