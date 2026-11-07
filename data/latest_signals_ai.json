@@ -12,37 +12,7 @@
     "exit_ref": "-",
     "distance_pct": -17.65,
     "action": "WAIT_CASH",
-    "updated_at": "2026-11-07 06:37:29"
-  },
-  {
-    "ticker": "SPY",
-    "name": "SPY",
-    "market": "us",
-    "is_fund": false,
-    "date": "2026-11-06",
-    "close": "735.29",
-    "currency": "$",
-    "position": "cash",
-    "entry_ref": "759.84",
-    "exit_ref": "-",
-    "distance_pct": -3.23,
-    "action": "WAIT_CASH",
-    "updated_at": "2026-11-07 06:37:29"
-  },
-  {
-    "ticker": "QQQM",
-    "name": "QQQM",
-    "market": "us",
-    "is_fund": false,
-    "date": "2026-11-06",
-    "close": "270.22",
-    "currency": "$",
-    "position": "cash",
-    "entry_ref": "284.05",
-    "exit_ref": "-",
-    "distance_pct": -4.87,
-    "action": "WAIT_CASH",
-    "updated_at": "2026-11-07 06:37:29"
+    "updated_at": "2026-11-07 23:04:08"
   },
   {
     "ticker": "GLD",
@@ -57,7 +27,37 @@
     "exit_ref": "364.26",
     "distance_pct": 2.27,
     "action": "HOLD_LONG",
-    "updated_at": "2026-11-07 06:37:29"
+    "updated_at": "2026-11-07 23:04:08"
+  },
+  {
+    "ticker": "SPY",
+    "name": "SPY",
+    "market": "us",
+    "is_fund": false,
+    "date": "2026-11-06",
+    "close": "735.29",
+    "currency": "$",
+    "position": "cash",
+    "entry_ref": "759.84",
+    "exit_ref": "-",
+    "distance_pct": -3.23,
+    "action": "WAIT_CASH",
+    "updated_at": "2026-11-07 23:04:08"
+  },
+  {
+    "ticker": "QQQM",
+    "name": "QQQM",
+    "market": "us",
+    "is_fund": false,
+    "date": "2026-11-06",
+    "close": "270.22",
+    "currency": "$",
+    "position": "cash",
+    "entry_ref": "284.05",
+    "exit_ref": "-",
+    "distance_pct": -4.87,
+    "action": "WAIT_CASH",
+    "updated_at": "2026-11-07 23:04:08"
   },
   {
     "ticker": "DIVB",
@@ -72,22 +72,7 @@
     "exit_ref": "68.78",
     "distance_pct": 2.36,
     "action": "HOLD_LONG",
-    "updated_at": "2026-11-07 06:37:29"
-  },
-  {
-    "ticker": "VNQ",
-    "name": "VNQ",
-    "market": "us",
-    "is_fund": false,
-    "date": "2026-11-06",
-    "close": "95.73",
-    "currency": "$",
-    "position": "long",
-    "entry_ref": "-",
-    "exit_ref": "92.19",
-    "distance_pct": 3.84,
-    "action": "HOLD_LONG",
-    "updated_at": "2026-11-07 06:37:29"
+    "updated_at": "2026-11-07 23:04:08"
   },
   {
     "ticker": "SPMO",
@@ -102,7 +87,22 @@
     "exit_ref": "-",
     "distance_pct": -11.06,
     "action": "WAIT_CASH",
-    "updated_at": "2026-11-07 06:37:29"
+    "updated_at": "2026-11-07 23:04:08"
+  },
+  {
+    "ticker": "VNQ",
+    "name": "VNQ",
+    "market": "us",
+    "is_fund": false,
+    "date": "2026-11-06",
+    "close": "95.73",
+    "currency": "$",
+    "position": "long",
+    "entry_ref": "-",
+    "exit_ref": "92.19",
+    "distance_pct": 3.84,
+    "action": "HOLD_LONG",
+    "updated_at": "2026-11-07 23:04:08"
   },
   {
     "ticker": "0050.TW",
@@ -110,14 +110,14 @@
     "market": "tw",
     "is_fund": false,
     "date": "2026-11-06",
-    "close": "92.30",
+    "close": "92.50",
     "currency": "NT$",
     "position": "cash",
-    "entry_ref": "101.99",
+    "entry_ref": "102.47",
     "exit_ref": "-",
-    "distance_pct": -9.5,
+    "distance_pct": -9.73,
     "action": "WAIT_CASH",
-    "updated_at": "2026-11-07 06:37:29"
+    "updated_at": "2026-11-07 23:04:08"
   },
   {
     "ticker": "00935.TW",
@@ -132,7 +132,7 @@
     "exit_ref": "-",
     "distance_pct": -6.87,
     "action": "WAIT_CASH",
-    "updated_at": "2026-11-07 06:37:29"
+    "updated_at": "2026-11-07 23:04:08"
   },
   {
     "ticker": "10YTW.EZ",
@@ -147,7 +147,7 @@
     "exit_ref": "-",
     "distance_pct": -3.42,
     "action": "WAIT_CASH",
-    "updated_at": "2026-11-07 06:37:29"
+    "updated_at": "2026-11-07 23:04:08"
   },
   {
     "ticker": "33YTW.EZ",
@@ -162,7 +162,7 @@
     "exit_ref": "-",
     "distance_pct": -9.25,
     "action": "WAIT_CASH",
-    "updated_at": "2026-11-07 06:37:29"
+    "updated_at": "2026-11-07 23:04:08"
   },
   {
     "ticker": "25YTW.EZ",
@@ -177,6 +177,6 @@
     "exit_ref": "-",
     "distance_pct": -10.73,
     "action": "WAIT_CASH",
-    "updated_at": "2026-11-07 06:37:29"
+    "updated_at": "2026-11-07 23:04:08"
   }
 ]
