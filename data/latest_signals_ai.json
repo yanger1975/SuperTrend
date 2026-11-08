@@ -1,35 +1,5 @@
 [
   {
-    "ticker": "SMH",
-    "name": "SMH",
-    "market": "us",
-    "is_fund": false,
-    "date": "2026-11-06",
-    "close": "463.96",
-    "currency": "$",
-    "position": "cash",
-    "entry_ref": "563.40",
-    "exit_ref": "-",
-    "distance_pct": -17.65,
-    "action": "WAIT_CASH",
-    "updated_at": "2026-11-07 23:04:08"
-  },
-  {
-    "ticker": "GLD",
-    "name": "GLD",
-    "market": "us",
-    "is_fund": false,
-    "date": "2026-11-06",
-    "close": "372.52",
-    "currency": "$",
-    "position": "long",
-    "entry_ref": "-",
-    "exit_ref": "364.26",
-    "distance_pct": 2.27,
-    "action": "HOLD_LONG",
-    "updated_at": "2026-11-07 23:04:08"
-  },
-  {
     "ticker": "SPY",
     "name": "SPY",
     "market": "us",
@@ -42,7 +12,22 @@
     "exit_ref": "-",
     "distance_pct": -3.23,
     "action": "WAIT_CASH",
-    "updated_at": "2026-11-07 23:04:08"
+    "updated_at": "2026-11-08 15:26:24"
+  },
+  {
+    "ticker": "SMH",
+    "name": "SMH",
+    "market": "us",
+    "is_fund": false,
+    "date": "2026-11-06",
+    "close": "463.96",
+    "currency": "$",
+    "position": "cash",
+    "entry_ref": "563.40",
+    "exit_ref": "-",
+    "distance_pct": -17.65,
+    "action": "WAIT_CASH",
+    "updated_at": "2026-11-08 15:26:24"
   },
   {
     "ticker": "QQQM",
@@ -57,37 +42,22 @@
     "exit_ref": "-",
     "distance_pct": -4.87,
     "action": "WAIT_CASH",
-    "updated_at": "2026-11-07 23:04:08"
+    "updated_at": "2026-11-08 15:26:24"
   },
   {
-    "ticker": "DIVB",
-    "name": "DIVB",
+    "ticker": "GLD",
+    "name": "GLD",
     "market": "us",
     "is_fund": false,
     "date": "2026-11-06",
-    "close": "70.40",
+    "close": "372.52",
     "currency": "$",
     "position": "long",
     "entry_ref": "-",
-    "exit_ref": "68.78",
-    "distance_pct": 2.36,
+    "exit_ref": "364.26",
+    "distance_pct": 2.27,
     "action": "HOLD_LONG",
-    "updated_at": "2026-11-07 23:04:08"
-  },
-  {
-    "ticker": "SPMO",
-    "name": "SPMO",
-    "market": "us",
-    "is_fund": false,
-    "date": "2026-11-06",
-    "close": "124.41",
-    "currency": "$",
-    "position": "cash",
-    "entry_ref": "139.88",
-    "exit_ref": "-",
-    "distance_pct": -11.06,
-    "action": "WAIT_CASH",
-    "updated_at": "2026-11-07 23:04:08"
+    "updated_at": "2026-11-08 15:26:24"
   },
   {
     "ticker": "VNQ",
@@ -102,7 +72,82 @@
     "exit_ref": "92.19",
     "distance_pct": 3.84,
     "action": "HOLD_LONG",
-    "updated_at": "2026-11-07 23:04:08"
+    "updated_at": "2026-11-08 15:26:24"
+  },
+  {
+    "ticker": "DIVB",
+    "name": "DIVB",
+    "market": "us",
+    "is_fund": false,
+    "date": "2026-11-06",
+    "close": "70.40",
+    "currency": "$",
+    "position": "long",
+    "entry_ref": "-",
+    "exit_ref": "68.78",
+    "distance_pct": 2.36,
+    "action": "HOLD_LONG",
+    "updated_at": "2026-11-08 15:26:24"
+  },
+  {
+    "ticker": "XLV",
+    "name": "XLV",
+    "market": "us",
+    "is_fund": false,
+    "date": "2026-11-06",
+    "close": "184.80",
+    "currency": "$",
+    "position": "long",
+    "entry_ref": "-",
+    "exit_ref": "181.09",
+    "distance_pct": 2.05,
+    "action": "HOLD_LONG",
+    "updated_at": "2026-11-08 15:26:24"
+  },
+  {
+    "ticker": "SPMO",
+    "name": "SPMO",
+    "market": "us",
+    "is_fund": false,
+    "date": "2026-11-06",
+    "close": "124.41",
+    "currency": "$",
+    "position": "cash",
+    "entry_ref": "139.88",
+    "exit_ref": "-",
+    "distance_pct": -11.06,
+    "action": "WAIT_CASH",
+    "updated_at": "2026-11-08 15:26:24"
+  },
+  {
+    "ticker": "BOAT",
+    "name": "BOAT",
+    "market": "us",
+    "is_fund": false,
+    "date": "2026-11-06",
+    "close": "47.28",
+    "currency": "$",
+    "position": "cash",
+    "entry_ref": "50.95",
+    "exit_ref": "-",
+    "distance_pct": -7.2,
+    "action": "WAIT_CASH",
+    "updated_at": "2026-11-08 15:26:24"
+  },
+  {
+    "ticker": "XLF",
+    "name": "XLF",
+    "market": "us",
+    "is_fund": false,
+    "date": "2026-11-06",
+    "close": "57.16",
+    "currency": "$",
+    "position": "long",
+    "entry_ref": "-",
+    "exit_ref": "56.91",
+    "distance_pct": 0.44,
+    "action": "HOLD_LONG",
+    "updated_at": "2026-11-08 15:26:24"
   },
   {
     "ticker": "0050.TW",
@@ -117,7 +162,22 @@
     "exit_ref": "-",
     "distance_pct": -9.73,
     "action": "WAIT_CASH",
-    "updated_at": "2026-11-07 23:04:08"
+    "updated_at": "2026-11-08 15:26:24"
+  },
+  {
+    "ticker": "DBC",
+    "name": "DBC",
+    "market": "us",
+    "is_fund": false,
+    "date": "2026-11-06",
+    "close": "31.54",
+    "currency": "$",
+    "position": "cash",
+    "entry_ref": "33.74",
+    "exit_ref": "-",
+    "distance_pct": -6.52,
+    "action": "WAIT_CASH",
+    "updated_at": "2026-11-08 15:26:24"
   },
   {
     "ticker": "00935.TW",
@@ -132,22 +192,7 @@
     "exit_ref": "-",
     "distance_pct": -6.87,
     "action": "WAIT_CASH",
-    "updated_at": "2026-11-07 23:04:08"
-  },
-  {
-    "ticker": "10YTW.EZ",
-    "name": "統一奔騰基金",
-    "market": "tw",
-    "is_fund": true,
-    "date": "2026-11-06",
-    "close": "556.40",
-    "currency": "NT$",
-    "position": "cash",
-    "entry_ref": "576.13",
-    "exit_ref": "-",
-    "distance_pct": -3.42,
-    "action": "WAIT_CASH",
-    "updated_at": "2026-11-07 23:04:08"
+    "updated_at": "2026-11-08 15:26:24"
   },
   {
     "ticker": "33YTW.EZ",
@@ -162,7 +207,22 @@
     "exit_ref": "-",
     "distance_pct": -9.25,
     "action": "WAIT_CASH",
-    "updated_at": "2026-11-07 23:04:08"
+    "updated_at": "2026-11-08 15:26:24"
+  },
+  {
+    "ticker": "10YTW.EZ",
+    "name": "統一奔騰基金",
+    "market": "tw",
+    "is_fund": true,
+    "date": "2026-11-06",
+    "close": "556.40",
+    "currency": "NT$",
+    "position": "cash",
+    "entry_ref": "576.13",
+    "exit_ref": "-",
+    "distance_pct": -3.42,
+    "action": "WAIT_CASH",
+    "updated_at": "2026-11-08 15:26:24"
   },
   {
     "ticker": "25YTW.EZ",
@@ -177,6 +237,6 @@
     "exit_ref": "-",
     "distance_pct": -10.73,
     "action": "WAIT_CASH",
-    "updated_at": "2026-11-07 23:04:08"
+    "updated_at": "2026-11-08 15:26:24"
   }
 ]
