@@ -1,5 +1,20 @@
 [
   {
+    "ticker": "SPY",
+    "name": "SPY",
+    "market": "us",
+    "is_fund": false,
+    "date": "2026-11-20",
+    "close": "689.81",
+    "currency": "$",
+    "position": "cash",
+    "entry_ref": "742.10",
+    "exit_ref": "-",
+    "distance_pct": -7.05,
+    "action": "WAIT_CASH",
+    "updated_at": "2026-11-22 23:01:46"
+  },
+  {
     "ticker": "QQQM",
     "name": "QQQM",
     "market": "us",
@@ -12,7 +27,7 @@
     "exit_ref": "-",
     "distance_pct": -12.43,
     "action": "WAIT_CASH",
-    "updated_at": "2026-11-21 23:05:54"
+    "updated_at": "2026-11-22 23:01:46"
   },
   {
     "ticker": "GLD",
@@ -27,22 +42,7 @@
     "exit_ref": "-",
     "distance_pct": -9.72,
     "action": "WAIT_CASH",
-    "updated_at": "2026-11-21 23:05:54"
-  },
-  {
-    "ticker": "SPY",
-    "name": "SPY",
-    "market": "us",
-    "is_fund": false,
-    "date": "2026-11-20",
-    "close": "689.81",
-    "currency": "$",
-    "position": "cash",
-    "entry_ref": "742.10",
-    "exit_ref": "-",
-    "distance_pct": -7.05,
-    "action": "WAIT_CASH",
-    "updated_at": "2026-11-21 23:05:54"
+    "updated_at": "2026-11-22 23:01:46"
   },
   {
     "ticker": "SMH",
@@ -57,7 +57,7 @@
     "exit_ref": "-",
     "distance_pct": -24.37,
     "action": "WAIT_CASH",
-    "updated_at": "2026-11-21 23:05:54"
+    "updated_at": "2026-11-22 23:01:46"
   },
   {
     "ticker": "VNQ",
@@ -72,37 +72,7 @@
     "exit_ref": "92.19",
     "distance_pct": 0.4,
     "action": "HOLD_LONG",
-    "updated_at": "2026-11-21 23:05:54"
-  },
-  {
-    "ticker": "DIVB",
-    "name": "DIVB",
-    "market": "us",
-    "is_fund": false,
-    "date": "2026-11-20",
-    "close": "67.44",
-    "currency": "$",
-    "position": "cash",
-    "entry_ref": "71.85",
-    "exit_ref": "-",
-    "distance_pct": -6.14,
-    "action": "WAIT_CASH",
-    "updated_at": "2026-11-21 23:05:54"
-  },
-  {
-    "ticker": "XLV",
-    "name": "XLV",
-    "market": "us",
-    "is_fund": false,
-    "date": "2026-11-20",
-    "close": "177.24",
-    "currency": "$",
-    "position": "cash",
-    "entry_ref": "190.06",
-    "exit_ref": "-",
-    "distance_pct": -6.75,
-    "action": "WAIT_CASH",
-    "updated_at": "2026-11-21 23:05:54"
+    "updated_at": "2026-11-22 23:01:46"
   },
   {
     "ticker": "SPMO",
@@ -117,7 +87,37 @@
     "exit_ref": "-",
     "distance_pct": -14.1,
     "action": "WAIT_CASH",
-    "updated_at": "2026-11-21 23:05:54"
+    "updated_at": "2026-11-22 23:01:46"
+  },
+  {
+    "ticker": "XLV",
+    "name": "XLV",
+    "market": "us",
+    "is_fund": false,
+    "date": "2026-11-20",
+    "close": "177.24",
+    "currency": "$",
+    "position": "cash",
+    "entry_ref": "190.06",
+    "exit_ref": "-",
+    "distance_pct": -6.75,
+    "action": "WAIT_CASH",
+    "updated_at": "2026-11-22 23:01:46"
+  },
+  {
+    "ticker": "DIVB",
+    "name": "DIVB",
+    "market": "us",
+    "is_fund": false,
+    "date": "2026-11-20",
+    "close": "67.44",
+    "currency": "$",
+    "position": "cash",
+    "entry_ref": "71.85",
+    "exit_ref": "-",
+    "distance_pct": -6.14,
+    "action": "WAIT_CASH",
+    "updated_at": "2026-11-22 23:01:46"
   },
   {
     "ticker": "XLF",
@@ -132,7 +132,7 @@
     "exit_ref": "-",
     "distance_pct": -4.4,
     "action": "WAIT_CASH",
-    "updated_at": "2026-11-21 23:05:54"
+    "updated_at": "2026-11-22 23:01:46"
   },
   {
     "ticker": "BOAT",
@@ -147,22 +147,7 @@
     "exit_ref": "-",
     "distance_pct": -7.63,
     "action": "WAIT_CASH",
-    "updated_at": "2026-11-21 23:05:54"
-  },
-  {
-    "ticker": "0050.TW",
-    "name": "元大台灣50",
-    "market": "tw",
-    "is_fund": false,
-    "date": "2026-11-20",
-    "close": "84.45",
-    "currency": "NT$",
-    "position": "cash",
-    "entry_ref": "95.04",
-    "exit_ref": "-",
-    "distance_pct": -11.14,
-    "action": "WAIT_CASH",
-    "updated_at": "2026-11-21 23:05:54"
+    "updated_at": "2026-11-22 23:01:46"
   },
   {
     "ticker": "DBC",
@@ -177,7 +162,7 @@
     "exit_ref": "-",
     "distance_pct": -7.65,
     "action": "WAIT_CASH",
-    "updated_at": "2026-11-21 23:05:54"
+    "updated_at": "2026-11-22 23:01:46"
   },
   {
     "ticker": "00935.TW",
@@ -192,7 +177,22 @@
     "exit_ref": "-",
     "distance_pct": -14.24,
     "action": "WAIT_CASH",
-    "updated_at": "2026-11-21 23:05:54"
+    "updated_at": "2026-11-22 23:01:46"
+  },
+  {
+    "ticker": "0050.TW",
+    "name": "元大台灣50",
+    "market": "tw",
+    "is_fund": false,
+    "date": "2026-11-20",
+    "close": "84.45",
+    "currency": "NT$",
+    "position": "cash",
+    "entry_ref": "95.04",
+    "exit_ref": "-",
+    "distance_pct": -11.14,
+    "action": "WAIT_CASH",
+    "updated_at": "2026-11-22 23:01:46"
   },
   {
     "ticker": "33YTW.EZ",
@@ -207,7 +207,7 @@
     "exit_ref": "-",
     "distance_pct": -10.18,
     "action": "WAIT_CASH",
-    "updated_at": "2026-11-21 23:05:54"
+    "updated_at": "2026-11-22 23:01:46"
   },
   {
     "ticker": "25YTW.EZ",
@@ -222,7 +222,7 @@
     "exit_ref": "-",
     "distance_pct": -7.34,
     "action": "WAIT_CASH",
-    "updated_at": "2026-11-21 23:05:54"
+    "updated_at": "2026-11-22 23:01:46"
   },
   {
     "ticker": "10YTW.EZ",
@@ -237,6 +237,6 @@
     "exit_ref": "-",
     "distance_pct": -12.04,
     "action": "WAIT_CASH",
-    "updated_at": "2026-11-21 23:05:54"
+    "updated_at": "2026-11-22 23:01:46"
   }
 ]
